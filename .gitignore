@@ -1,0 +1,9 @@
+.venv/
+*__pycache__/
+*.db
+data/cleaned_json
+data/raw_json
+createFolder.py
+notebooks
+anaconda_projects
+.virtual_documents
