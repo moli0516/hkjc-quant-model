@@ -79,6 +79,9 @@ if __name__ == "__main__":
         if file.is_file():
             raw_file_path = raw_json_path / file.name
             target_file_path = cleaned_json_path / file.name
-            data_cleaner = Data_cleaning_manager_normalize_race(raw_json_path=raw_file_path, cleaned_json_path=target_file_path)
-            data_cleaner.start_clean()
-            data_cleaner.save_json()
+            try:
+                data_cleaner = Data_cleaning_manager_normalize_race(raw_json_path=raw_file_path, cleaned_json_path=target_file_path)
+                data_cleaner.start_clean()
+                data_cleaner.save_json()
+            except:
+                print("I am gay")
