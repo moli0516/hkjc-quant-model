@@ -28,7 +28,7 @@
 | `rolling_2_speed_z`      | 浮點數   | Done      |
 | `rolling_2_speed_z_std`  | 浮點數   | Done      |
 
-### 🏇 2. 人為形勢與利益博弈維度（Marco 的心情量化）
+### 🏇 2. 人為形勢與利益博弈維度
 
 
 | 特徵欄位名稱                | 數據類型 | Finished? |
