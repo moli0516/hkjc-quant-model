@@ -24,8 +24,8 @@ class Feature_pipeline:
         df = pd.json_normalize(combine_data)
         return df
     def _build_win_placing(self):
-        self.df['is_win'] = int(self.df['placing'] == 1)
-        self.df['is_place'] = int(self.df['placing'] < 4)
+        self.df['is_win'] = (self.df['placing'] == 1).astype(int)
+        self.df['is_place'] = (self.df['placing'] < 4).astype(int)
     #def _build_draw_features(self):
     #    self.df['draw_win_rate'] = self.df.groupby('draw')['is_win'].mean()
     #    self.df['draw_place_rate'] = self.df.groupby('draw')['is_place'].mean()
@@ -40,7 +40,7 @@ class Feature_pipeline:
         #3. Previous Z score of speed in the last races
         self.df["h_prev_speed_z"] = h_grpby_z.shift(1)
         #4. Average Z score over the history
-        self.df["h_mean_speed_z"] = h_grpby_z.transform(lambda x: x.shift(1).expanding(min_periods=1).mean()).fillna(self.df["h_speed_z"])
+        self.df["h_mean_speed_z"] = h_grpby_z.transform(lambda x: x.shift(1).expanding(min_periods=1).mean()).fillna(0)
         #5. Average Z score of speed in the last 2 races (Do the horse has outstanding performances recently)
         self.df["h_rolling_2_mean_speed_z"] = h_grpby_z.transform(lambda x: x.shift(1).rolling(window=2, min_periods=2).mean()).fillna(self.df["h_speed_z"])
         #6. Standard deviation of Z score of speed in the last 2 races (Do the horse has stable performances recently)
