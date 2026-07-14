@@ -7,10 +7,6 @@
 | ------------------------------- | -------- | --------- |
 | `draw_placing_rate`             | 浮點數   | Done      |
 | `draw_win_rate`                 | 浮點數   | Done      |
-| `smoothed_h_track_win_rate`     | 浮點數   | Done      |
-| `smoothed_h_track_placing_rate` | 浮點數   | Done      |
-| `smoothed_h_rail_win_rate`      | 浮點數   | Done      |
-| `smoothed_h_rail_placing_rate`  | 浮點數   | Done      |
 
 ## 📂 模組二：`horses_features` folder（馬匹、人為與歷史滾動特徵）
 
@@ -49,6 +45,10 @@
 | `rolling_30_t_placing_rate` | 浮點數   | Done      |
 | `smoothed_jt_win_rate`      | 浮點數   | Done      |
 | `smoothed_jt_placing_rate`  | 浮點數   | Done      |
+| `smoothed_h_track_win_rate`     | 浮點數   | Done      |
+| `smoothed_h_track_placing_rate` | 浮點數   | Done      |
+| `smoothed_h_rail_win_rate`      | 浮點數   | Done      |
+| `smoothed_h_rail_placing_rate`  | 浮點數   | Done      |
 
 ### ⚖️ 3. 當場博弈與相對化維度
 
