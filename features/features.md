@@ -23,6 +23,10 @@
 | `place_z`                | 浮點數   | Done      |
 | `smoothed_win_rate`      | 浮點數   | Done      |
 | `smoothed_placing_rate`  | 浮點數   | Done      |
+| `smoothed_h_track_win_rate`     | 浮點數   | Done      |
+| `smoothed_h_track_placing_rate` | 浮點數   | Done      |
+| `smoothed_h_rail_win_rate`      | 浮點數   | Done      |
+| `smoothed_h_rail_placing_rate`  | 浮點數   | Done      |
 | `speed`                  | 浮點數   | Done      |
 | `speed_z`                | 浮點數   | Done      |
 | `rolling_2_speed_z`      | 浮點數   | Done      |
@@ -45,10 +49,6 @@
 | `rolling_30_t_placing_rate` | 浮點數   | Done      |
 | `smoothed_jt_win_rate`      | 浮點數   | Done      |
 | `smoothed_jt_placing_rate`  | 浮點數   | Done      |
-| `smoothed_h_track_win_rate`     | 浮點數   | Done      |
-| `smoothed_h_track_placing_rate` | 浮點數   | Done      |
-| `smoothed_h_rail_win_rate`      | 浮點數   | Done      |
-| `smoothed_h_rail_placing_rate`  | 浮點數   | Done      |
 
 ### ⚖️ 3. 當場博弈與相對化維度
 
