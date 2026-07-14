@@ -3,7 +3,6 @@ import json
 import pathlib
 import os
 import re
-\
 
 class Data_cleaning_manager_flatten:
     def __init__(self, raw_json_path, cleaned_json_path):
@@ -45,10 +44,12 @@ class Data_cleaning_manager_flatten:
             else:
                 margin_map = {
                         "---": 0.0, "鼻位": 0.05, "短馬頭位": 0.1, "頭位": 0.2, "頸位": 0.3,
-                        "多個馬身": 99.0, "未能完成賽事": None, "退出": None
+                        "多個馬身": 99.0, "未能完成賽事": None, "退出": None, "多個馬位": 99.0, "平頭馬":0.0
                         }
-                if hhd in margin_map:
+                if hhd in margin_map.keys():
                     return margin_map[hhd]
+                else:
+                    return 0.25
         return hhd
     def convert_min_to_sec(self,time):
         if time != "---":
@@ -95,7 +96,7 @@ class Data_cleaning_manager_flatten:
             self.df = self.df.copy()
         except:
             pass
-    
+        
     def start_clean(self):
         self.remove_W()
         self.df['placing'] = self.df['placing'].astype(str)
@@ -103,6 +104,7 @@ class Data_cleaning_manager_flatten:
             self.df["placing"] = pd.to_numeric(self.df["placing"].str.extract(r'(\d+)')[0], errors='coerce')
         except:
             self.df["placing"] = self.df["placing"].astype(int)
+            
         self.df["draw"] = self.df["draw"].astype(int)
         self.df['finished_time_sec'] = self.df["finished_time"].apply(self.convert_min_to_sec)
         self.df['head_horse_dist_cleaned'] = self.df["head_horse_dist"].apply(self.clean_head_horse_dist)
@@ -110,10 +112,39 @@ class Data_cleaning_manager_flatten:
         self.df['horse_name'] = self.df["horse_name"].apply(self.clean_horse_name)
         self.df['class'] = self.df["races.basic_info"].str.slice(stop=3).apply(self.get_class)
         self.df['length'] = pd.to_numeric(self.df["races.basic_info"].str.slice(start=6,stop=10).str.extract(r'(\d+)')[0], errors='coerce')
-        self.df[["track_texture", "track_type"]] =  self.df["races.track_info"].apply(self.extract_track_info).tolist()
-        self.df = self.df[~self.df['class'].apply(lambda x: isinstance(x, str))]
         
+        # 【修正 1】拆開賦值，防止 DataFrame 變成雙層 MultiIndex 欄位
+        track_res = self.df["races.track_info"].apply(self.extract_track_info)
+        self.df["track_texture"] = [x[0] for x in track_res]
+        self.df["track_type"] = [x[1] for x in track_res]
+        
+        self.df = self.df[~self.df['class'].apply(lambda x: isinstance(x, str))]
         self.df = self.df.copy()
+        
+        # 【修正 2】使用 100% 成功的過濾法來移除欄位
+        cols_to_drop = ["races.basic_info", "head_horse_dist", "finished_time", "track_info"]
+        self.df = self.df[[col for col in self.df.columns if col not in cols_to_drop]]
+        
+        print("【成功】移除後的最終欄位：", list(self.df.columns))
+    
+    def start_clean_oid(self):
+        self.remove_W()
+        extracted = self.df["placing"].astype(str).str.extract(r'^.*?(\d+)')
+        self.df["placing"] = pd.to_numeric(extracted[0], errors='coerce').fillna(0).astype(int)
+        self.df["draw"] = self.df["draw"].astype(int)
+        self.df['finished_time_sec'] = self.df["finished_time"].apply(self.convert_min_to_sec)
+        self.df['head_horse_dist_cleaned'] = self.df["head_horse_dist"].apply(self.clean_head_horse_dist)
+        self.df['horse_id'] = self.df["horse_name"].apply(self.get_horse_id)
+        self.df['horse_name'] = self.df["horse_name"].apply(self.clean_horse_name)
+        self.df['class'] = self.df["races.basic_info"].str.slice(stop=3).apply(self.get_class)
+        self.df['length'] = pd.to_numeric(self.df["races.basic_info"].str.slice(start=6,stop=10).str.extract(r'(\d+)')[0], errors='coerce')
+        track_res = self.df["races.track_info"].apply(self.extract_track_info)
+        self.df["track_texture"] = [x[0] for x in track_res]
+        self.df["track_type"] = [x[1] for x in track_res]
+        self.df = self.df[~self.df['class'].apply(lambda x: isinstance(x, str))]
+        self.df = self.df.copy()
+        print("目前真實的欄位名稱列表：", list(self.df.columns))
+        self.df.drop(columns=["races.basic_info", "head_horse_dist", "finished_time", "track_info"], inplace=True)
     def save_json(self):
         with open(self.cleaned_json_path ,"w",encoding="utf-8") as f:
             self.df.to_json(f, orient="records",indent=4,force_ascii=False)
