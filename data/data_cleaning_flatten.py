@@ -5,9 +5,10 @@ import os
 import re
 
 class Data_cleaning_manager_flatten:
-    def __init__(self, raw_json_path, cleaned_json_path):
+    def __init__(self, raw_json_path, cleaned_json_path, rating_json_path):
         self.raw_json_path = raw_json_path
         self.cleaned_json_path = cleaned_json_path
+        self.cleaned_json_path = rating_json_path
         self.df = self.create_df()
     def create_df(self):
         raw_json = None
@@ -20,7 +21,17 @@ class Data_cleaning_manager_flatten:
             meta=['date','venue',['races','race_id'],['races','basic_info'],['races','track_condition'],['races','track_info'],['races','cumulative_finish_time'],['races','sectional_finish_time']]
         )
         return df
-    
+    def merge_rating(self):
+        with open(self.rating_json_path, "r", encoding='utf-8') as f:
+            rating_data = json.load(f)
+        rating_df = pd.DataFrame(rating_data)
+        
+        self.df['horse_id'] = self.df['horse_id'].astype(str)
+        rating_df['horse_id'] = rating_df['horse_id'].astype(str)
+        
+        self.df = self.df.merge(rating_df, on='horse_id', how='left')
+        
+        self.df['rating'] = self.df['rating'].fillna(0).astype(int)
     def get_horse_id(self,horse_name):
         match = re.search(r'[A-Z]\d{1,3}', horse_name)
         if match:
@@ -155,6 +166,7 @@ class Data_cleaning_manager_flatten:
 if __name__ == "__main__":
     raw_json_path = pathlib.Path.cwd() / "data/"  "raw_json"
     cleaned_json_path = pathlib.Path.cwd() /"data" / "cleaned_json" / "flatten" 
+    rating_json_path = pathlib.Path.cwd() /"data" / "horses_rating.json"
     for file in raw_json_path.iterdir():
         print(file.name)
         # Ensure it is a file and not a folder
@@ -162,7 +174,7 @@ if __name__ == "__main__":
             raw_file_path = raw_json_path / file.name
             target_file_path = cleaned_json_path / file.name
             try:
-                data_cleaner = Data_cleaning_manager_flatten(raw_json_path=raw_file_path, cleaned_json_path=target_file_path)
+                data_cleaner = Data_cleaning_manager_flatten(raw_json_path=raw_file_path, cleaned_json_path=target_file_path, rating_json_path=c)
                 data_cleaner.start_clean()
                 data_cleaner.save_json()
             except:

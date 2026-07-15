@@ -1,6 +1,8 @@
 .venv/
+.venv.old/
 *__pycache__/
 *.db
+*.parquet
 data/cleaned_json
 data/raw_json
 createFolder.py

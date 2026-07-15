@@ -4,14 +4,18 @@ import pathlib
 import json
 from hook import Hook
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from get_ratings import data_process
 
 class Data_manager:
     def __init__(self, db_path = pathlib.Path(__file__).parent.parent / "database" / "hkjc_racing.db", json_path = pathlib.Path(__file__).parent.parent / "data" / "raw_json"):
         self.db_path = db_path
         self.json_path = json_path
-    def save_json(self, date_str, params):
-        
+    def save_races_json(self, date_str, params):
         file_path = self.json_path / f"{date_str[:4]}-{date_str[5:7]}-{date_str[8:]}.json"
+        with open(file_path, "w", encoding='utf-8') as f:
+            json.dump(params, f, ensure_ascii=False, indent=4)
+    def save_normal_json(self, file_name, params):
+        file_path = self.json_path / f"{file_name}.json"
         with open(file_path, "w", encoding='utf-8') as f:
             json.dump(params, f, ensure_ascii=False, indent=4)
 
@@ -38,8 +42,8 @@ def process_single_day(date, data_manager, hook):
         print("Saved to json")
     except:
         print("Error occured")
-            
-if __name__ == "__main__":
+       
+def process_all_dates():
     dates = get_all_date_multithread()
     data_manager = Data_manager()
     hook = Hook("https://racing.hkjc.com/zh-hk/local/information/localresults")
@@ -52,5 +56,10 @@ if __name__ == "__main__":
                 # 這裡可以追蹤每個線程回傳的狀態
             except Exception as e:
                 print(f"[系統致命錯誤] 日期 {date} 的執行緒完全崩潰: {e}")
+                
+if __name__ == "__main__":
+    data_manager = Data_manager(json_path=pathlib.Path(__file__).parent.parent / "data" )
+    ratings = data_process()
+    data_manager.save_normal_json("horses_rating", ratings)
     
         

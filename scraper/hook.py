@@ -70,3 +70,23 @@ class Hook:
         except Exception as e:
             print(f"❌ 網絡請求發生異常錯誤: {e}")
             return None
+    def get_no_params_soup(self):
+        try:
+            time.sleep(random.randrange(2,4))
+            response = self.session.get(self.url, timeout=15)
+            print(f"🔗 正在請求: {response.url}")
+            
+            html_content = response.content.decode("utf-8", errors="replace")
+            soup = BeautifulSoup(html_content, "html.parser")
+            
+            # 🌟 修正 3：更嚴格的關鍵字檢查
+            if soup:
+                print("✨ 成功獲取網頁原始碼，交給 Parser 處理...")
+            else:
+                print("❌ 網頁原始碼完全無法獲取")
+                
+            return soup, response.url
+            
+        except Exception as e:
+            print(f"❌ 網絡請求發生異常錯誤: {e}")
+            return None

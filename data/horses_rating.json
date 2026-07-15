@@ -1,0 +1,4794 @@
+[
+    {
+        "horse_id": "H037",
+        "rating": 67
+    },
+    {
+        "horse_id": "K039",
+        "rating": 48
+    },
+    {
+        "horse_id": "K260",
+        "rating": 51
+    },
+    {
+        "horse_id": "K307",
+        "rating": 54
+    },
+    {
+        "horse_id": "L341",
+        "rating": 54
+    },
+    {
+        "horse_id": "J509",
+        "rating": 65
+    },
+    {
+        "horse_id": "K564",
+        "rating": 82
+    },
+    {
+        "horse_id": "K400",
+        "rating": 72
+    },
+    {
+        "horse_id": "L162",
+        "rating": 50
+    },
+    {
+        "horse_id": "K183",
+        "rating": 67
+    },
+    {
+        "horse_id": "L031",
+        "rating": 50
+    },
+    {
+        "horse_id": "H293",
+        "rating": 33
+    },
+    {
+        "horse_id": "K382",
+        "rating": 62
+    },
+    {
+        "horse_id": "K190",
+        "rating": 55
+    },
+    {
+        "horse_id": "L019",
+        "rating": 67
+    },
+    {
+        "horse_id": "J345",
+        "rating": 38
+    },
+    {
+        "horse_id": "H392",
+        "rating": 44
+    },
+    {
+        "horse_id": "K434",
+        "rating": 69
+    },
+    {
+        "horse_id": "G123",
+        "rating": 55
+    },
+    {
+        "horse_id": "K367",
+        "rating": 63
+    },
+    {
+        "horse_id": "K176",
+        "rating": 66
+    },
+    {
+        "horse_id": "J169",
+        "rating": 42
+    },
+    {
+        "horse_id": "K322",
+        "rating": 59
+    },
+    {
+        "horse_id": "K566",
+        "rating": 82
+    },
+    {
+        "horse_id": "K398",
+        "rating": 63
+    },
+    {
+        "horse_id": "J066",
+        "rating": 82
+    },
+    {
+        "horse_id": "L452",
+        "rating": 52
+    },
+    {
+        "horse_id": "K150",
+        "rating": 40
+    },
+    {
+        "horse_id": "E435",
+        "rating": 37
+    },
+    {
+        "horse_id": "L230",
+        "rating": 75
+    },
+    {
+        "horse_id": "L326",
+        "rating": 53
+    },
+    {
+        "horse_id": "H334",
+        "rating": 72
+    },
+    {
+        "horse_id": "E058",
+        "rating": 114
+    },
+    {
+        "horse_id": "L260",
+        "rating": 54
+    },
+    {
+        "horse_id": "K155",
+        "rating": 52
+    },
+    {
+        "horse_id": "K579",
+        "rating": 44
+    },
+    {
+        "horse_id": "K277",
+        "rating": 49
+    },
+    {
+        "horse_id": "K192",
+        "rating": 65
+    },
+    {
+        "horse_id": "L436",
+        "rating": 65
+    },
+    {
+        "horse_id": "K103",
+        "rating": 38
+    },
+    {
+        "horse_id": "L405",
+        "rating": 64
+    },
+    {
+        "horse_id": "J397",
+        "rating": 49
+    },
+    {
+        "horse_id": "J448",
+        "rating": 32
+    },
+    {
+        "horse_id": "L369",
+        "rating": 52
+    },
+    {
+        "horse_id": "L487",
+        "rating": 52
+    },
+    {
+        "horse_id": "G268",
+        "rating": 86
+    },
+    {
+        "horse_id": "L513",
+        "rating": 84
+    },
+    {
+        "horse_id": "J530",
+        "rating": 58
+    },
+    {
+        "horse_id": "K333",
+        "rating": 53
+    },
+    {
+        "horse_id": "L203",
+        "rating": 48
+    },
+    {
+        "horse_id": "K096",
+        "rating": 52
+    },
+    {
+        "horse_id": "K305",
+        "rating": 44
+    },
+    {
+        "horse_id": "K181",
+        "rating": 37
+    },
+    {
+        "horse_id": "L210",
+        "rating": 62
+    },
+    {
+        "horse_id": "L428",
+        "rating": 68
+    },
+    {
+        "horse_id": "K364",
+        "rating": 51
+    },
+    {
+        "horse_id": "L430",
+        "rating": 64
+    },
+    {
+        "horse_id": "J123",
+        "rating": 49
+    },
+    {
+        "horse_id": "H418",
+        "rating": 90
+    },
+    {
+        "horse_id": "K571",
+        "rating": 55
+    },
+    {
+        "horse_id": "K357",
+        "rating": 67
+    },
+    {
+        "horse_id": "L502",
+        "rating": 52
+    },
+    {
+        "horse_id": "J468",
+        "rating": 77
+    },
+    {
+        "horse_id": "L012",
+        "rating": 44
+    },
+    {
+        "horse_id": "L101",
+        "rating": 48
+    },
+    {
+        "horse_id": "L201",
+        "rating": 43
+    },
+    {
+        "horse_id": "L196",
+        "rating": 61
+    },
+    {
+        "horse_id": "L344",
+        "rating": 52
+    },
+    {
+        "horse_id": "K059",
+        "rating": 35
+    },
+    {
+        "horse_id": "L009",
+        "rating": 38
+    },
+    {
+        "horse_id": "L222",
+        "rating": 60
+    },
+    {
+        "horse_id": "H212",
+        "rating": 101
+    },
+    {
+        "horse_id": "H431",
+        "rating": 53
+    },
+    {
+        "horse_id": "J513",
+        "rating": 56
+    },
+    {
+        "horse_id": "J219",
+        "rating": 69
+    },
+    {
+        "horse_id": "K567",
+        "rating": 53
+    },
+    {
+        "horse_id": "J458",
+        "rating": 49
+    },
+    {
+        "horse_id": "L148",
+        "rating": 87
+    },
+    {
+        "horse_id": "J319",
+        "rating": 29
+    },
+    {
+        "horse_id": "K395",
+        "rating": 70
+    },
+    {
+        "horse_id": "H175",
+        "rating": 71
+    },
+    {
+        "horse_id": "K308",
+        "rating": 43
+    },
+    {
+        "horse_id": "L423",
+        "rating": 52
+    },
+    {
+        "horse_id": "H475",
+        "rating": 57
+    },
+    {
+        "horse_id": "K201",
+        "rating": 78
+    },
+    {
+        "horse_id": "K279",
+        "rating": 36
+    },
+    {
+        "horse_id": "L134",
+        "rating": 61
+    },
+    {
+        "horse_id": "L050",
+        "rating": 52
+    },
+    {
+        "horse_id": "L324",
+        "rating": 52
+    },
+    {
+        "horse_id": "J312",
+        "rating": 35
+    },
+    {
+        "horse_id": "L067",
+        "rating": 44
+    },
+    {
+        "horse_id": "L219",
+        "rating": 71
+    },
+    {
+        "horse_id": "L337",
+        "rating": 65
+    },
+    {
+        "horse_id": "K217",
+        "rating": 38
+    },
+    {
+        "horse_id": "L283",
+        "rating": 72
+    },
+    {
+        "horse_id": "L014",
+        "rating": 72
+    },
+    {
+        "horse_id": "K342",
+        "rating": 58
+    },
+    {
+        "horse_id": "L214",
+        "rating": 59
+    },
+    {
+        "horse_id": "K519",
+        "rating": 49
+    },
+    {
+        "horse_id": "H436",
+        "rating": 40
+    },
+    {
+        "horse_id": "K173",
+        "rating": 100
+    },
+    {
+        "horse_id": "K008",
+        "rating": 82
+    },
+    {
+        "horse_id": "L273",
+        "rating": 45
+    },
+    {
+        "horse_id": "H283",
+        "rating": 37
+    },
+    {
+        "horse_id": "L364",
+        "rating": 50
+    },
+    {
+        "horse_id": "L096",
+        "rating": 61
+    },
+    {
+        "horse_id": "K250",
+        "rating": 32
+    },
+    {
+        "horse_id": "L066",
+        "rating": 46
+    },
+    {
+        "horse_id": "K298",
+        "rating": 80
+    },
+    {
+        "horse_id": "K037",
+        "rating": 79
+    },
+    {
+        "horse_id": "H435",
+        "rating": 61
+    },
+    {
+        "horse_id": "K282",
+        "rating": 35
+    },
+    {
+        "horse_id": "J444",
+        "rating": 70
+    },
+    {
+        "horse_id": "J309",
+        "rating": 38
+    },
+    {
+        "horse_id": "H382",
+        "rating": 58
+    },
+    {
+        "horse_id": "J279",
+        "rating": 77
+    },
+    {
+        "horse_id": "J278",
+        "rating": 64
+    },
+    {
+        "horse_id": "L361",
+        "rating": 52
+    },
+    {
+        "horse_id": "J269",
+        "rating": 22
+    },
+    {
+        "horse_id": "H117",
+        "rating": 85
+    },
+    {
+        "horse_id": "K540",
+        "rating": 42
+    },
+    {
+        "horse_id": "L119",
+        "rating": 50
+    },
+    {
+        "horse_id": "K497",
+        "rating": 52
+    },
+    {
+        "horse_id": "J366",
+        "rating": 56
+    },
+    {
+        "horse_id": "K122",
+        "rating": 85
+    },
+    {
+        "horse_id": "J276",
+        "rating": 68
+    },
+    {
+        "horse_id": "H161",
+        "rating": 71
+    },
+    {
+        "horse_id": "L397",
+        "rating": 64
+    },
+    {
+        "horse_id": "L239",
+        "rating": 66
+    },
+    {
+        "horse_id": "L435",
+        "rating": 72
+    },
+    {
+        "horse_id": "L107",
+        "rating": 75
+    },
+    {
+        "horse_id": "K010",
+        "rating": 71
+    },
+    {
+        "horse_id": "K235",
+        "rating": 67
+    },
+    {
+        "horse_id": "K264",
+        "rating": 48
+    },
+    {
+        "horse_id": "L267",
+        "rating": 60
+    },
+    {
+        "horse_id": "K093",
+        "rating": 62
+    },
+    {
+        "horse_id": "K441",
+        "rating": 50
+    },
+    {
+        "horse_id": "L360",
+        "rating": 52
+    },
+    {
+        "horse_id": "H219",
+        "rating": 75
+    },
+    {
+        "horse_id": "J390",
+        "rating": 72
+    },
+    {
+        "horse_id": "J364",
+        "rating": 65
+    },
+    {
+        "horse_id": "J358",
+        "rating": 121
+    },
+    {
+        "horse_id": "K351",
+        "rating": 49
+    },
+    {
+        "horse_id": "K575",
+        "rating": 61
+    },
+    {
+        "horse_id": "J015",
+        "rating": 38
+    },
+    {
+        "horse_id": "J183",
+        "rating": 47
+    },
+    {
+        "horse_id": "K381",
+        "rating": 76
+    },
+    {
+        "horse_id": "K431",
+        "rating": 41
+    },
+    {
+        "horse_id": "H432",
+        "rating": 34
+    },
+    {
+        "horse_id": "K556",
+        "rating": 52
+    },
+    {
+        "horse_id": "L124",
+        "rating": 53
+    },
+    {
+        "horse_id": "K327",
+        "rating": 50
+    },
+    {
+        "horse_id": "J445",
+        "rating": 69
+    },
+    {
+        "horse_id": "L247",
+        "rating": 55
+    },
+    {
+        "horse_id": "L476",
+        "rating": 65
+    },
+    {
+        "horse_id": "L270",
+        "rating": 41
+    },
+    {
+        "horse_id": "L357",
+        "rating": 64
+    },
+    {
+        "horse_id": "G465",
+        "rating": 57
+    },
+    {
+        "horse_id": "L192",
+        "rating": 74
+    },
+    {
+        "horse_id": "G463",
+        "rating": 62
+    },
+    {
+        "horse_id": "J446",
+        "rating": 65
+    },
+    {
+        "horse_id": "L090",
+        "rating": 50
+    },
+    {
+        "horse_id": "L311",
+        "rating": 70
+    },
+    {
+        "horse_id": "K287",
+        "rating": 41
+    },
+    {
+        "horse_id": "K355",
+        "rating": 66
+    },
+    {
+        "horse_id": "J394",
+        "rating": 49
+    },
+    {
+        "horse_id": "K229",
+        "rating": 46
+    },
+    {
+        "horse_id": "L258",
+        "rating": 52
+    },
+    {
+        "horse_id": "J042",
+        "rating": 46
+    },
+    {
+        "horse_id": "H041",
+        "rating": 50
+    },
+    {
+        "horse_id": "H399",
+        "rating": 120
+    },
+    {
+        "horse_id": "L389",
+        "rating": 52
+    },
+    {
+        "horse_id": "L494",
+        "rating": 74
+    },
+    {
+        "horse_id": "L467",
+        "rating": 64
+    },
+    {
+        "horse_id": "K253",
+        "rating": 44
+    },
+    {
+        "horse_id": "K138",
+        "rating": 31
+    },
+    {
+        "horse_id": "K132",
+        "rating": 51
+    },
+    {
+        "horse_id": "K385",
+        "rating": 90
+    },
+    {
+        "horse_id": "L069",
+        "rating": 43
+    },
+    {
+        "horse_id": "K451",
+        "rating": 76
+    },
+    {
+        "horse_id": "L169",
+        "rating": 52
+    },
+    {
+        "horse_id": "J099",
+        "rating": 32
+    },
+    {
+        "horse_id": "K272",
+        "rating": 42
+    },
+    {
+        "horse_id": "L315",
+        "rating": 62
+    },
+    {
+        "horse_id": "K290",
+        "rating": 39
+    },
+    {
+        "horse_id": "H320",
+        "rating": 33
+    },
+    {
+        "horse_id": "L223",
+        "rating": 80
+    },
+    {
+        "horse_id": "L099",
+        "rating": 74
+    },
+    {
+        "horse_id": "L479",
+        "rating": 70
+    },
+    {
+        "horse_id": "K347",
+        "rating": 56
+    },
+    {
+        "horse_id": "K329",
+        "rating": 48
+    },
+    {
+        "horse_id": "K500",
+        "rating": 34
+    },
+    {
+        "horse_id": "K506",
+        "rating": 52
+    },
+    {
+        "horse_id": "K002",
+        "rating": 47
+    },
+    {
+        "horse_id": "J499",
+        "rating": 55
+    },
+    {
+        "horse_id": "J224",
+        "rating": 47
+    },
+    {
+        "horse_id": "K301",
+        "rating": 53
+    },
+    {
+        "horse_id": "L228",
+        "rating": 52
+    },
+    {
+        "horse_id": "L087",
+        "rating": 47
+    },
+    {
+        "horse_id": "L207",
+        "rating": 55
+    },
+    {
+        "horse_id": "J323",
+        "rating": 59
+    },
+    {
+        "horse_id": "L138",
+        "rating": 42
+    },
+    {
+        "horse_id": "L409",
+        "rating": 64
+    },
+    {
+        "horse_id": "L033",
+        "rating": 71
+    },
+    {
+        "horse_id": "L352",
+        "rating": 52
+    },
+    {
+        "horse_id": "L116",
+        "rating": 58
+    },
+    {
+        "horse_id": "L233",
+        "rating": 52
+    },
+    {
+        "horse_id": "H089",
+        "rating": 68
+    },
+    {
+        "horse_id": "L178",
+        "rating": 50
+    },
+    {
+        "horse_id": "K241",
+        "rating": 28
+    },
+    {
+        "horse_id": "K399",
+        "rating": 32
+    },
+    {
+        "horse_id": "J545",
+        "rating": 29
+    },
+    {
+        "horse_id": "K344",
+        "rating": 29
+    },
+    {
+        "horse_id": "L408",
+        "rating": 65
+    },
+    {
+        "horse_id": "L266",
+        "rating": 46
+    },
+    {
+        "horse_id": "L202",
+        "rating": 48
+    },
+    {
+        "horse_id": "L185",
+        "rating": 62
+    },
+    {
+        "horse_id": "J533",
+        "rating": 60
+    },
+    {
+        "horse_id": "E175",
+        "rating": 50
+    },
+    {
+        "horse_id": "E061",
+        "rating": 71
+    },
+    {
+        "horse_id": "H332",
+        "rating": 16
+    },
+    {
+        "horse_id": "H321",
+        "rating": 55
+    },
+    {
+        "horse_id": "H203",
+        "rating": 59
+    },
+    {
+        "horse_id": "K418",
+        "rating": 52
+    },
+    {
+        "horse_id": "L028",
+        "rating": 79
+    },
+    {
+        "horse_id": "L053",
+        "rating": 62
+    },
+    {
+        "horse_id": "L391",
+        "rating": 52
+    },
+    {
+        "horse_id": "L180",
+        "rating": 44
+    },
+    {
+        "horse_id": "L316",
+        "rating": 61
+    },
+    {
+        "horse_id": "J298",
+        "rating": 70
+    },
+    {
+        "horse_id": "J511",
+        "rating": 54
+    },
+    {
+        "horse_id": "J517",
+        "rating": 102
+    },
+    {
+        "horse_id": "L412",
+        "rating": 67
+    },
+    {
+        "horse_id": "K144",
+        "rating": 50
+    },
+    {
+        "horse_id": "L147",
+        "rating": 66
+    },
+    {
+        "horse_id": "J197",
+        "rating": 95
+    },
+    {
+        "horse_id": "L238",
+        "rating": 62
+    },
+    {
+        "horse_id": "H381",
+        "rating": 65
+    },
+    {
+        "horse_id": "J504",
+        "rating": 38
+    },
+    {
+        "horse_id": "J170",
+        "rating": 46
+    },
+    {
+        "horse_id": "K343",
+        "rating": 38
+    },
+    {
+        "horse_id": "K369",
+        "rating": 83
+    },
+    {
+        "horse_id": "K319",
+        "rating": 51
+    },
+    {
+        "horse_id": "K318",
+        "rating": 58
+    },
+    {
+        "horse_id": "H301",
+        "rating": 93
+    },
+    {
+        "horse_id": "L078",
+        "rating": 56
+    },
+    {
+        "horse_id": "J459",
+        "rating": 35
+    },
+    {
+        "horse_id": "J479",
+        "rating": 26
+    },
+    {
+        "horse_id": "L332",
+        "rating": 52
+    },
+    {
+        "horse_id": "H116",
+        "rating": 56
+    },
+    {
+        "horse_id": "J007",
+        "rating": 81
+    },
+    {
+        "horse_id": "K014",
+        "rating": 90
+    },
+    {
+        "horse_id": "L327",
+        "rating": 52
+    },
+    {
+        "horse_id": "H454",
+        "rating": 43
+    },
+    {
+        "horse_id": "H383",
+        "rating": 78
+    },
+    {
+        "horse_id": "L227",
+        "rating": 52
+    },
+    {
+        "horse_id": "L322",
+        "rating": 60
+    },
+    {
+        "horse_id": "J346",
+        "rating": 75
+    },
+    {
+        "horse_id": "K529",
+        "rating": 52
+    },
+    {
+        "horse_id": "K249",
+        "rating": 77
+    },
+    {
+        "horse_id": "J391",
+        "rating": 90
+    },
+    {
+        "horse_id": "J075",
+        "rating": 83
+    },
+    {
+        "horse_id": "L137",
+        "rating": 58
+    },
+    {
+        "horse_id": "J439",
+        "rating": 54
+    },
+    {
+        "horse_id": "L321",
+        "rating": 52
+    },
+    {
+        "horse_id": "L406",
+        "rating": 64
+    },
+    {
+        "horse_id": "L305",
+        "rating": 58
+    },
+    {
+        "horse_id": "G312",
+        "rating": 32
+    },
+    {
+        "horse_id": "K386",
+        "rating": 61
+    },
+    {
+        "horse_id": "K099",
+        "rating": 40
+    },
+    {
+        "horse_id": "L379",
+        "rating": 66
+    },
+    {
+        "horse_id": "J158",
+        "rating": 66
+    },
+    {
+        "horse_id": "K174",
+        "rating": 62
+    },
+    {
+        "horse_id": "L459",
+        "rating": 64
+    },
+    {
+        "horse_id": "K047",
+        "rating": 39
+    },
+    {
+        "horse_id": "L254",
+        "rating": 48
+    },
+    {
+        "horse_id": "H486",
+        "rating": 40
+    },
+    {
+        "horse_id": "L512",
+        "rating": 82
+    },
+    {
+        "horse_id": "J395",
+        "rating": 32
+    },
+    {
+        "horse_id": "H396",
+        "rating": 76
+    },
+    {
+        "horse_id": "J285",
+        "rating": 71
+    },
+    {
+        "horse_id": "L220",
+        "rating": 54
+    },
+    {
+        "horse_id": "J288",
+        "rating": 40
+    },
+    {
+        "horse_id": "K553",
+        "rating": 62
+    },
+    {
+        "horse_id": "L297",
+        "rating": 52
+    },
+    {
+        "horse_id": "K546",
+        "rating": 52
+    },
+    {
+        "horse_id": "L189",
+        "rating": 48
+    },
+    {
+        "horse_id": "L473",
+        "rating": 64
+    },
+    {
+        "horse_id": "L433",
+        "rating": 66
+    },
+    {
+        "horse_id": "K035",
+        "rating": 37
+    },
+    {
+        "horse_id": "E471",
+        "rating": 50
+    },
+    {
+        "horse_id": "H439",
+        "rating": 65
+    },
+    {
+        "horse_id": "K204",
+        "rating": 54
+    },
+    {
+        "horse_id": "K436",
+        "rating": 60
+    },
+    {
+        "horse_id": "L447",
+        "rating": 52
+    },
+    {
+        "horse_id": "K246",
+        "rating": 109
+    },
+    {
+        "horse_id": "K156",
+        "rating": 83
+    },
+    {
+        "horse_id": "K356",
+        "rating": 78
+    },
+    {
+        "horse_id": "L394",
+        "rating": 63
+    },
+    {
+        "horse_id": "L165",
+        "rating": 46
+    },
+    {
+        "horse_id": "J359",
+        "rating": 45
+    },
+    {
+        "horse_id": "J398",
+        "rating": 46
+    },
+    {
+        "horse_id": "L274",
+        "rating": 50
+    },
+    {
+        "horse_id": "L041",
+        "rating": 64
+    },
+    {
+        "horse_id": "L157",
+        "rating": 46
+    },
+    {
+        "horse_id": "K064",
+        "rating": 57
+    },
+    {
+        "horse_id": "H235",
+        "rating": 74
+    },
+    {
+        "horse_id": "L073",
+        "rating": 43
+    },
+    {
+        "horse_id": "L079",
+        "rating": 51
+    },
+    {
+        "horse_id": "K126",
+        "rating": 53
+    },
+    {
+        "horse_id": "K407",
+        "rating": 48
+    },
+    {
+        "horse_id": "K542",
+        "rating": 65
+    },
+    {
+        "horse_id": "L380",
+        "rating": 67
+    },
+    {
+        "horse_id": "L076",
+        "rating": 56
+    },
+    {
+        "horse_id": "K586",
+        "rating": 54
+    },
+    {
+        "horse_id": "L005",
+        "rating": 39
+    },
+    {
+        "horse_id": "K330",
+        "rating": 39
+    },
+    {
+        "horse_id": "L085",
+        "rating": 40
+    },
+    {
+        "horse_id": "L016",
+        "rating": 65
+    },
+    {
+        "horse_id": "K545",
+        "rating": 57
+    },
+    {
+        "horse_id": "L175",
+        "rating": 44
+    },
+    {
+        "horse_id": "L113",
+        "rating": 88
+    },
+    {
+        "horse_id": "L331",
+        "rating": 47
+    },
+    {
+        "horse_id": "K266",
+        "rating": 62
+    },
+    {
+        "horse_id": "H177",
+        "rating": 61
+    },
+    {
+        "horse_id": "L159",
+        "rating": 63
+    },
+    {
+        "horse_id": "K403",
+        "rating": 56
+    },
+    {
+        "horse_id": "L253",
+        "rating": 52
+    },
+    {
+        "horse_id": "K154",
+        "rating": 66
+    },
+    {
+        "horse_id": "J514",
+        "rating": 90
+    },
+    {
+        "horse_id": "H453",
+        "rating": 66
+    },
+    {
+        "horse_id": "L287",
+        "rating": 58
+    },
+    {
+        "horse_id": "L044",
+        "rating": 55
+    },
+    {
+        "horse_id": "J487",
+        "rating": 63
+    },
+    {
+        "horse_id": "K408",
+        "rating": 70
+    },
+    {
+        "horse_id": "K208",
+        "rating": 78
+    },
+    {
+        "horse_id": "L132",
+        "rating": 48
+    },
+    {
+        "horse_id": "L347",
+        "rating": 52
+    },
+    {
+        "horse_id": "H450",
+        "rating": 70
+    },
+    {
+        "horse_id": "H376",
+        "rating": 76
+    },
+    {
+        "horse_id": "H474",
+        "rating": 94
+    },
+    {
+        "horse_id": "K206",
+        "rating": 71
+    },
+    {
+        "horse_id": "K423",
+        "rating": 34
+    },
+    {
+        "horse_id": "K203",
+        "rating": 64
+    },
+    {
+        "horse_id": "K237",
+        "rating": 61
+    },
+    {
+        "horse_id": "K184",
+        "rating": 53
+    },
+    {
+        "horse_id": "J239",
+        "rating": 69
+    },
+    {
+        "horse_id": "L232",
+        "rating": 80
+    },
+    {
+        "horse_id": "H338",
+        "rating": 93
+    },
+    {
+        "horse_id": "L354",
+        "rating": 65
+    },
+    {
+        "horse_id": "J133",
+        "rating": 69
+    },
+    {
+        "horse_id": "J174",
+        "rating": 30
+    },
+    {
+        "horse_id": "K558",
+        "rating": 47
+    },
+    {
+        "horse_id": "K445",
+        "rating": 52
+    },
+    {
+        "horse_id": "L166",
+        "rating": 65
+    },
+    {
+        "horse_id": "L194",
+        "rating": 48
+    },
+    {
+        "horse_id": "L431",
+        "rating": 64
+    },
+    {
+        "horse_id": "K417",
+        "rating": 51
+    },
+    {
+        "horse_id": "J418",
+        "rating": 60
+    },
+    {
+        "horse_id": "L199",
+        "rating": 49
+    },
+    {
+        "horse_id": "J510",
+        "rating": 55
+    },
+    {
+        "horse_id": "K049",
+        "rating": 36
+    },
+    {
+        "horse_id": "K038",
+        "rating": 35
+    },
+    {
+        "horse_id": "L453",
+        "rating": 52
+    },
+    {
+        "horse_id": "H324",
+        "rating": 47
+    },
+    {
+        "horse_id": "L356",
+        "rating": 66
+    },
+    {
+        "horse_id": "H233",
+        "rating": 43
+    },
+    {
+        "horse_id": "L464",
+        "rating": 52
+    },
+    {
+        "horse_id": "L403",
+        "rating": 64
+    },
+    {
+        "horse_id": "L080",
+        "rating": 108
+    },
+    {
+        "horse_id": "J502",
+        "rating": 43
+    },
+    {
+        "horse_id": "J182",
+        "rating": 42
+    },
+    {
+        "horse_id": "K409",
+        "rating": 55
+    },
+    {
+        "horse_id": "L105",
+        "rating": 57
+    },
+    {
+        "horse_id": "K028",
+        "rating": 26
+    },
+    {
+        "horse_id": "G292",
+        "rating": 38
+    },
+    {
+        "horse_id": "J454",
+        "rating": 92
+    },
+    {
+        "horse_id": "L013",
+        "rating": 66
+    },
+    {
+        "horse_id": "K570",
+        "rating": 62
+    },
+    {
+        "horse_id": "J363",
+        "rating": 81
+    },
+    {
+        "horse_id": "L451",
+        "rating": 52
+    },
+    {
+        "horse_id": "L264",
+        "rating": 66
+    },
+    {
+        "horse_id": "L063",
+        "rating": 50
+    },
+    {
+        "horse_id": "J357",
+        "rating": 92
+    },
+    {
+        "horse_id": "H485",
+        "rating": 112
+    },
+    {
+        "horse_id": "L272",
+        "rating": 52
+    },
+    {
+        "horse_id": "L075",
+        "rating": 68
+    },
+    {
+        "horse_id": "K297",
+        "rating": 60
+    },
+    {
+        "horse_id": "J331",
+        "rating": 27
+    },
+    {
+        "horse_id": "H120",
+        "rating": 50
+    },
+    {
+        "horse_id": "K238",
+        "rating": 80
+    },
+    {
+        "horse_id": "K148",
+        "rating": 38
+    },
+    {
+        "horse_id": "G192",
+        "rating": 46
+    },
+    {
+        "horse_id": "H344",
+        "rating": 34
+    },
+    {
+        "horse_id": "L396",
+        "rating": 77
+    },
+    {
+        "horse_id": "L021",
+        "rating": 50
+    },
+    {
+        "horse_id": "K313",
+        "rating": 72
+    },
+    {
+        "horse_id": "E301",
+        "rating": 68
+    },
+    {
+        "horse_id": "L171",
+        "rating": 72
+    },
+    {
+        "horse_id": "K044",
+        "rating": 28
+    },
+    {
+        "horse_id": "J245",
+        "rating": 100
+    },
+    {
+        "horse_id": "L296",
+        "rating": 48
+    },
+    {
+        "horse_id": "J300",
+        "rating": 62
+    },
+    {
+        "horse_id": "L158",
+        "rating": 48
+    },
+    {
+        "horse_id": "K040",
+        "rating": 56
+    },
+    {
+        "horse_id": "K383",
+        "rating": 44
+    },
+    {
+        "horse_id": "L443",
+        "rating": 52
+    },
+    {
+        "horse_id": "L218",
+        "rating": 50
+    },
+    {
+        "horse_id": "L177",
+        "rating": 52
+    },
+    {
+        "horse_id": "K487",
+        "rating": 52
+    },
+    {
+        "horse_id": "L450",
+        "rating": 52
+    },
+    {
+        "horse_id": "L268",
+        "rating": 62
+    },
+    {
+        "horse_id": "K548",
+        "rating": 44
+    },
+    {
+        "horse_id": "K377",
+        "rating": 32
+    },
+    {
+        "horse_id": "K162",
+        "rating": 59
+    },
+    {
+        "horse_id": "L401",
+        "rating": 52
+    },
+    {
+        "horse_id": "L204",
+        "rating": 58
+    },
+    {
+        "horse_id": "K534",
+        "rating": 59
+    },
+    {
+        "horse_id": "L458",
+        "rating": 52
+    },
+    {
+        "horse_id": "H241",
+        "rating": 65
+    },
+    {
+        "horse_id": "L195",
+        "rating": 69
+    },
+    {
+        "horse_id": "K258",
+        "rating": 84
+    },
+    {
+        "horse_id": "L208",
+        "rating": 51
+    },
+    {
+        "horse_id": "G462",
+        "rating": 69
+    },
+    {
+        "horse_id": "J403",
+        "rating": 45
+    },
+    {
+        "horse_id": "K544",
+        "rating": 39
+    },
+    {
+        "horse_id": "G209",
+        "rating": 56
+    },
+    {
+        "horse_id": "J498",
+        "rating": 64
+    },
+    {
+        "horse_id": "L498",
+        "rating": 52
+    },
+    {
+        "horse_id": "K485",
+        "rating": 60
+    },
+    {
+        "horse_id": "L404",
+        "rating": 64
+    },
+    {
+        "horse_id": "L240",
+        "rating": 71
+    },
+    {
+        "horse_id": "J537",
+        "rating": 85
+    },
+    {
+        "horse_id": "E486",
+        "rating": 139
+    },
+    {
+        "horse_id": "L375",
+        "rating": 69
+    },
+    {
+        "horse_id": "H412",
+        "rating": 102
+    },
+    {
+        "horse_id": "K552",
+        "rating": 57
+    },
+    {
+        "horse_id": "L059",
+        "rating": 43
+    },
+    {
+        "horse_id": "K507",
+        "rating": 97
+    },
+    {
+        "horse_id": "H070",
+        "rating": 66
+    },
+    {
+        "horse_id": "L400",
+        "rating": 52
+    },
+    {
+        "horse_id": "L343",
+        "rating": 52
+    },
+    {
+        "horse_id": "K358",
+        "rating": 51
+    },
+    {
+        "horse_id": "H337",
+        "rating": 92
+    },
+    {
+        "horse_id": "L108",
+        "rating": 80
+    },
+    {
+        "horse_id": "K563",
+        "rating": 63
+    },
+    {
+        "horse_id": "L097",
+        "rating": 53
+    },
+    {
+        "horse_id": "J093",
+        "rating": 50
+    },
+    {
+        "horse_id": "L445",
+        "rating": 52
+    },
+    {
+        "horse_id": "H276",
+        "rating": 41
+    },
+    {
+        "horse_id": "L039",
+        "rating": 56
+    },
+    {
+        "horse_id": "J542",
+        "rating": 56
+    },
+    {
+        "horse_id": "L003",
+        "rating": 82
+    },
+    {
+        "horse_id": "J043",
+        "rating": 52
+    },
+    {
+        "horse_id": "K057",
+        "rating": 92
+    },
+    {
+        "horse_id": "K061",
+        "rating": 95
+    },
+    {
+        "horse_id": "K041",
+        "rating": 58
+    },
+    {
+        "horse_id": "K032",
+        "rating": 95
+    },
+    {
+        "horse_id": "J161",
+        "rating": 93
+    },
+    {
+        "horse_id": "K474",
+        "rating": 79
+    },
+    {
+        "horse_id": "J213",
+        "rating": 33
+    },
+    {
+        "horse_id": "L004",
+        "rating": 76
+    },
+    {
+        "horse_id": "K565",
+        "rating": 46
+    },
+    {
+        "horse_id": "K336",
+        "rating": 43
+    },
+    {
+        "horse_id": "K456",
+        "rating": 40
+    },
+    {
+        "horse_id": "L172",
+        "rating": 58
+    },
+    {
+        "horse_id": "L070",
+        "rating": 52
+    },
+    {
+        "horse_id": "J127",
+        "rating": 102
+    },
+    {
+        "horse_id": "L411",
+        "rating": 78
+    },
+    {
+        "horse_id": "J503",
+        "rating": 61
+    },
+    {
+        "horse_id": "G265",
+        "rating": 85
+    },
+    {
+        "horse_id": "L008",
+        "rating": 50
+    },
+    {
+        "horse_id": "L427",
+        "rating": 70
+    },
+    {
+        "horse_id": "K175",
+        "rating": 58
+    },
+    {
+        "horse_id": "H380",
+        "rating": 100
+    },
+    {
+        "horse_id": "L362",
+        "rating": 46
+    },
+    {
+        "horse_id": "L390",
+        "rating": 52
+    },
+    {
+        "horse_id": "L086",
+        "rating": 50
+    },
+    {
+        "horse_id": "J520",
+        "rating": 60
+    },
+    {
+        "horse_id": "L278",
+        "rating": 52
+    },
+    {
+        "horse_id": "L320",
+        "rating": 52
+    },
+    {
+        "horse_id": "K476",
+        "rating": 58
+    },
+    {
+        "horse_id": "L414",
+        "rating": 64
+    },
+    {
+        "horse_id": "K215",
+        "rating": 43
+    },
+    {
+        "horse_id": "K516",
+        "rating": 70
+    },
+    {
+        "horse_id": "L074",
+        "rating": 44
+    },
+    {
+        "horse_id": "L286",
+        "rating": 52
+    },
+    {
+        "horse_id": "J263",
+        "rating": 80
+    },
+    {
+        "horse_id": "J027",
+        "rating": 96
+    },
+    {
+        "horse_id": "K084",
+        "rating": 63
+    },
+    {
+        "horse_id": "K478",
+        "rating": 103
+    },
+    {
+        "horse_id": "K340",
+        "rating": 76
+    },
+    {
+        "horse_id": "H095",
+        "rating": 51
+    },
+    {
+        "horse_id": "J301",
+        "rating": 89
+    },
+    {
+        "horse_id": "H394",
+        "rating": 66
+    },
+    {
+        "horse_id": "J231",
+        "rating": 57
+    },
+    {
+        "horse_id": "J118",
+        "rating": 55
+    },
+    {
+        "horse_id": "J223",
+        "rating": 40
+    },
+    {
+        "horse_id": "K245",
+        "rating": 78
+    },
+    {
+        "horse_id": "D241",
+        "rating": 29
+    },
+    {
+        "horse_id": "K118",
+        "rating": 48
+    },
+    {
+        "horse_id": "K306",
+        "rating": 41
+    },
+    {
+        "horse_id": "K180",
+        "rating": 71
+    },
+    {
+        "horse_id": "L474",
+        "rating": 64
+    },
+    {
+        "horse_id": "K323",
+        "rating": 30
+    },
+    {
+        "horse_id": "K479",
+        "rating": 56
+    },
+    {
+        "horse_id": "J267",
+        "rating": 57
+    },
+    {
+        "horse_id": "L130",
+        "rating": 44
+    },
+    {
+        "horse_id": "L043",
+        "rating": 45
+    },
+    {
+        "horse_id": "J255",
+        "rating": 27
+    },
+    {
+        "horse_id": "K089",
+        "rating": 40
+    },
+    {
+        "horse_id": "H395",
+        "rating": 81
+    },
+    {
+        "horse_id": "K352",
+        "rating": 75
+    },
+    {
+        "horse_id": "L330",
+        "rating": 52
+    },
+    {
+        "horse_id": "H197",
+        "rating": 44
+    },
+    {
+        "horse_id": "K521",
+        "rating": 47
+    },
+    {
+        "horse_id": "K124",
+        "rating": 26
+    },
+    {
+        "horse_id": "J136",
+        "rating": 92
+    },
+    {
+        "horse_id": "K107",
+        "rating": 73
+    },
+    {
+        "horse_id": "K302",
+        "rating": 60
+    },
+    {
+        "horse_id": "J332",
+        "rating": 31
+    },
+    {
+        "horse_id": "L493",
+        "rating": 80
+    },
+    {
+        "horse_id": "K004",
+        "rating": 71
+    },
+    {
+        "horse_id": "K076",
+        "rating": 68
+    },
+    {
+        "horse_id": "L064",
+        "rating": 50
+    },
+    {
+        "horse_id": "H459",
+        "rating": 67
+    },
+    {
+        "horse_id": "L454",
+        "rating": 52
+    },
+    {
+        "horse_id": "K312",
+        "rating": 77
+    },
+    {
+        "horse_id": "J482",
+        "rating": 32
+    },
+    {
+        "horse_id": "J396",
+        "rating": 61
+    },
+    {
+        "horse_id": "L188",
+        "rating": 74
+    },
+    {
+        "horse_id": "K017",
+        "rating": 48
+    },
+    {
+        "horse_id": "K167",
+        "rating": 54
+    },
+    {
+        "horse_id": "L299",
+        "rating": 64
+    },
+    {
+        "horse_id": "L170",
+        "rating": 66
+    },
+    {
+        "horse_id": "J481",
+        "rating": 86
+    },
+    {
+        "horse_id": "K006",
+        "rating": 60
+    },
+    {
+        "horse_id": "L141",
+        "rating": 43
+    },
+    {
+        "horse_id": "K320",
+        "rating": 55
+    },
+    {
+        "horse_id": "L209",
+        "rating": 48
+    },
+    {
+        "horse_id": "L302",
+        "rating": 64
+    },
+    {
+        "horse_id": "J489",
+        "rating": 77
+    },
+    {
+        "horse_id": "L328",
+        "rating": 44
+    },
+    {
+        "horse_id": "L146",
+        "rating": 50
+    },
+    {
+        "horse_id": "L251",
+        "rating": 52
+    },
+    {
+        "horse_id": "K533",
+        "rating": 84
+    },
+    {
+        "horse_id": "L234",
+        "rating": 74
+    },
+    {
+        "horse_id": "L456",
+        "rating": 52
+    },
+    {
+        "horse_id": "K511",
+        "rating": 63
+    },
+    {
+        "horse_id": "J187",
+        "rating": 38
+    },
+    {
+        "horse_id": "K396",
+        "rating": 54
+    },
+    {
+        "horse_id": "J393",
+        "rating": 53
+    },
+    {
+        "horse_id": "K240",
+        "rating": 45
+    },
+    {
+        "horse_id": "K101",
+        "rating": 41
+    },
+    {
+        "horse_id": "J375",
+        "rating": 36
+    },
+    {
+        "horse_id": "L417",
+        "rating": 52
+    },
+    {
+        "horse_id": "L376",
+        "rating": 65
+    },
+    {
+        "horse_id": "L298",
+        "rating": 52
+    },
+    {
+        "horse_id": "G368",
+        "rating": 33
+    },
+    {
+        "horse_id": "J079",
+        "rating": 62
+    },
+    {
+        "horse_id": "K415",
+        "rating": 32
+    },
+    {
+        "horse_id": "H388",
+        "rating": 52
+    },
+    {
+        "horse_id": "K321",
+        "rating": 48
+    },
+    {
+        "horse_id": "L001",
+        "rating": 52
+    },
+    {
+        "horse_id": "J150",
+        "rating": 65
+    },
+    {
+        "horse_id": "L460",
+        "rating": 66
+    },
+    {
+        "horse_id": "L313",
+        "rating": 60
+    },
+    {
+        "horse_id": "G207",
+        "rating": 79
+    },
+    {
+        "horse_id": "L048",
+        "rating": 42
+    },
+    {
+        "horse_id": "K368",
+        "rating": 66
+    },
+    {
+        "horse_id": "J205",
+        "rating": 35
+    },
+    {
+        "horse_id": "L483",
+        "rating": 52
+    },
+    {
+        "horse_id": "H419",
+        "rating": 27
+    },
+    {
+        "horse_id": "H162",
+        "rating": 68
+    },
+    {
+        "horse_id": "K429",
+        "rating": 41
+    },
+    {
+        "horse_id": "H230",
+        "rating": 43
+    },
+    {
+        "horse_id": "E461",
+        "rating": 75
+    },
+    {
+        "horse_id": "K239",
+        "rating": 44
+    },
+    {
+        "horse_id": "K532",
+        "rating": 39
+    },
+    {
+        "horse_id": "K129",
+        "rating": 96
+    },
+    {
+        "horse_id": "K136",
+        "rating": 66
+    },
+    {
+        "horse_id": "L151",
+        "rating": 80
+    },
+    {
+        "horse_id": "K353",
+        "rating": 57
+    },
+    {
+        "horse_id": "J413",
+        "rating": 55
+    },
+    {
+        "horse_id": "L422",
+        "rating": 52
+    },
+    {
+        "horse_id": "K314",
+        "rating": 65
+    },
+    {
+        "horse_id": "J176",
+        "rating": 34
+    },
+    {
+        "horse_id": "J146",
+        "rating": 52
+    },
+    {
+        "horse_id": "J291",
+        "rating": 67
+    },
+    {
+        "horse_id": "J401",
+        "rating": 58
+    },
+    {
+        "horse_id": "J195",
+        "rating": 92
+    },
+    {
+        "horse_id": "K464",
+        "rating": 43
+    },
+    {
+        "horse_id": "J272",
+        "rating": 69
+    },
+    {
+        "horse_id": "K295",
+        "rating": 44
+    },
+    {
+        "horse_id": "K284",
+        "rating": 47
+    },
+    {
+        "horse_id": "L469",
+        "rating": 66
+    },
+    {
+        "horse_id": "L477",
+        "rating": 64
+    },
+    {
+        "horse_id": "L482",
+        "rating": 64
+    },
+    {
+        "horse_id": "L495",
+        "rating": 64
+    },
+    {
+        "horse_id": "K475",
+        "rating": 52
+    },
+    {
+        "horse_id": "L226",
+        "rating": 67
+    },
+    {
+        "horse_id": "K467",
+        "rating": 48
+    },
+    {
+        "horse_id": "K379",
+        "rating": 63
+    },
+    {
+        "horse_id": "J181",
+        "rating": 44
+    },
+    {
+        "horse_id": "J534",
+        "rating": 91
+    },
+    {
+        "horse_id": "J180",
+        "rating": 75
+    },
+    {
+        "horse_id": "H289",
+        "rating": 46
+    },
+    {
+        "horse_id": "K160",
+        "rating": 55
+    },
+    {
+        "horse_id": "K234",
+        "rating": 75
+    },
+    {
+        "horse_id": "K480",
+        "rating": 44
+    },
+    {
+        "horse_id": "L193",
+        "rating": 72
+    },
+    {
+        "horse_id": "K294",
+        "rating": 66
+    },
+    {
+        "horse_id": "L126",
+        "rating": 70
+    },
+    {
+        "horse_id": "H252",
+        "rating": 38
+    },
+    {
+        "horse_id": "J236",
+        "rating": 48
+    },
+    {
+        "horse_id": "K444",
+        "rating": 46
+    },
+    {
+        "horse_id": "K554",
+        "rating": 76
+    },
+    {
+        "horse_id": "K394",
+        "rating": 42
+    },
+    {
+        "horse_id": "K005",
+        "rating": 60
+    },
+    {
+        "horse_id": "L265",
+        "rating": 48
+    },
+    {
+        "horse_id": "K523",
+        "rating": 36
+    },
+    {
+        "horse_id": "G223",
+        "rating": 42
+    },
+    {
+        "horse_id": "J039",
+        "rating": 60
+    },
+    {
+        "horse_id": "K056",
+        "rating": 77
+    },
+    {
+        "horse_id": "K097",
+        "rating": 77
+    },
+    {
+        "horse_id": "K177",
+        "rating": 48
+    },
+    {
+        "horse_id": "J050",
+        "rating": 86
+    },
+    {
+        "horse_id": "K326",
+        "rating": 54
+    },
+    {
+        "horse_id": "J260",
+        "rating": 86
+    },
+    {
+        "horse_id": "K491",
+        "rating": 85
+    },
+    {
+        "horse_id": "L129",
+        "rating": 43
+    },
+    {
+        "horse_id": "H123",
+        "rating": 46
+    },
+    {
+        "horse_id": "J299",
+        "rating": 56
+    },
+    {
+        "horse_id": "H294",
+        "rating": 105
+    },
+    {
+        "horse_id": "L329",
+        "rating": 49
+    },
+    {
+        "horse_id": "L257",
+        "rating": 50
+    },
+    {
+        "horse_id": "J362",
+        "rating": 47
+    },
+    {
+        "horse_id": "L091",
+        "rating": 48
+    },
+    {
+        "horse_id": "L426",
+        "rating": 52
+    },
+    {
+        "horse_id": "J157",
+        "rating": 83
+    },
+    {
+        "horse_id": "L037",
+        "rating": 61
+    },
+    {
+        "horse_id": "K468",
+        "rating": 58
+    },
+    {
+        "horse_id": "L385",
+        "rating": 50
+    },
+    {
+        "horse_id": "J316",
+        "rating": 100
+    },
+    {
+        "horse_id": "K421",
+        "rating": 36
+    },
+    {
+        "horse_id": "L342",
+        "rating": 52
+    },
+    {
+        "horse_id": "J215",
+        "rating": 46
+    },
+    {
+        "horse_id": "L368",
+        "rating": 52
+    },
+    {
+        "horse_id": "K325",
+        "rating": 54
+    },
+    {
+        "horse_id": "K218",
+        "rating": 86
+    },
+    {
+        "horse_id": "L200",
+        "rating": 51
+    },
+    {
+        "horse_id": "J465",
+        "rating": 71
+    },
+    {
+        "horse_id": "L501",
+        "rating": 52
+    },
+    {
+        "horse_id": "J132",
+        "rating": 44
+    },
+    {
+        "horse_id": "J370",
+        "rating": 65
+    },
+    {
+        "horse_id": "J131",
+        "rating": 57
+    },
+    {
+        "horse_id": "K477",
+        "rating": 56
+    },
+    {
+        "horse_id": "L339",
+        "rating": 72
+    },
+    {
+        "horse_id": "K462",
+        "rating": 45
+    },
+    {
+        "horse_id": "J243",
+        "rating": 30
+    },
+    {
+        "horse_id": "H087",
+        "rating": 44
+    },
+    {
+        "horse_id": "K021",
+        "rating": 112
+    },
+    {
+        "horse_id": "J392",
+        "rating": 27
+    },
+    {
+        "horse_id": "K310",
+        "rating": 67
+    },
+    {
+        "horse_id": "J494",
+        "rating": 56
+    },
+    {
+        "horse_id": "L359",
+        "rating": 52
+    },
+    {
+        "horse_id": "L425",
+        "rating": 64
+    },
+    {
+        "horse_id": "K363",
+        "rating": 72
+    },
+    {
+        "horse_id": "G230",
+        "rating": 47
+    },
+    {
+        "horse_id": "L318",
+        "rating": 52
+    },
+    {
+        "horse_id": "L468",
+        "rating": 72
+    },
+    {
+        "horse_id": "K254",
+        "rating": 54
+    },
+    {
+        "horse_id": "K127",
+        "rating": 60
+    },
+    {
+        "horse_id": "L082",
+        "rating": 45
+    },
+    {
+        "horse_id": "L045",
+        "rating": 42
+    },
+    {
+        "horse_id": "K469",
+        "rating": 78
+    },
+    {
+        "horse_id": "J486",
+        "rating": 56
+    },
+    {
+        "horse_id": "K484",
+        "rating": 55
+    },
+    {
+        "horse_id": "L216",
+        "rating": 50
+    },
+    {
+        "horse_id": "K463",
+        "rating": 52
+    },
+    {
+        "horse_id": "J428",
+        "rating": 73
+    },
+    {
+        "horse_id": "J501",
+        "rating": 35
+    },
+    {
+        "horse_id": "L002",
+        "rating": 48
+    },
+    {
+        "horse_id": "K526",
+        "rating": 43
+    },
+    {
+        "horse_id": "L155",
+        "rating": 69
+    },
+    {
+        "horse_id": "L212",
+        "rating": 50
+    },
+    {
+        "horse_id": "L054",
+        "rating": 49
+    },
+    {
+        "horse_id": "K227",
+        "rating": 103
+    },
+    {
+        "horse_id": "K121",
+        "rating": 62
+    },
+    {
+        "horse_id": "L486",
+        "rating": 52
+    },
+    {
+        "horse_id": "J344",
+        "rating": 32
+    },
+    {
+        "horse_id": "L106",
+        "rating": 64
+    },
+    {
+        "horse_id": "K090",
+        "rating": 36
+    },
+    {
+        "horse_id": "H011",
+        "rating": 33
+    },
+    {
+        "horse_id": "L280",
+        "rating": 52
+    },
+    {
+        "horse_id": "H408",
+        "rating": 111
+    },
+    {
+        "horse_id": "J426",
+        "rating": 74
+    },
+    {
+        "horse_id": "L510",
+        "rating": 52
+    },
+    {
+        "horse_id": "L325",
+        "rating": 52
+    },
+    {
+        "horse_id": "L022",
+        "rating": 59
+    },
+    {
+        "horse_id": "L449",
+        "rating": 52
+    },
+    {
+        "horse_id": "L231",
+        "rating": 52
+    },
+    {
+        "horse_id": "H317",
+        "rating": 50
+    },
+    {
+        "horse_id": "J060",
+        "rating": 72
+    },
+    {
+        "horse_id": "L168",
+        "rating": 65
+    },
+    {
+        "horse_id": "K374",
+        "rating": 47
+    },
+    {
+        "horse_id": "J423",
+        "rating": 47
+    },
+    {
+        "horse_id": "K416",
+        "rating": 52
+    },
+    {
+        "horse_id": "K539",
+        "rating": 38
+    },
+    {
+        "horse_id": "L182",
+        "rating": 46
+    },
+    {
+        "horse_id": "L094",
+        "rating": 72
+    },
+    {
+        "horse_id": "L291",
+        "rating": 53
+    },
+    {
+        "horse_id": "K512",
+        "rating": 61
+    },
+    {
+        "horse_id": "J115",
+        "rating": 29
+    },
+    {
+        "horse_id": "J317",
+        "rating": 63
+    },
+    {
+        "horse_id": "L111",
+        "rating": 59
+    },
+    {
+        "horse_id": "L198",
+        "rating": 52
+    },
+    {
+        "horse_id": "L215",
+        "rating": 64
+    },
+    {
+        "horse_id": "L340",
+        "rating": 65
+    },
+    {
+        "horse_id": "L470",
+        "rating": 66
+    },
+    {
+        "horse_id": "L181",
+        "rating": 46
+    },
+    {
+        "horse_id": "L310",
+        "rating": 72
+    },
+    {
+        "horse_id": "L023",
+        "rating": 67
+    },
+    {
+        "horse_id": "L020",
+        "rating": 63
+    },
+    {
+        "horse_id": "K390",
+        "rating": 40
+    },
+    {
+        "horse_id": "K033",
+        "rating": 83
+    },
+    {
+        "horse_id": "J222",
+        "rating": 46
+    },
+    {
+        "horse_id": "H452",
+        "rating": 100
+    },
+    {
+        "horse_id": "K252",
+        "rating": 56
+    },
+    {
+        "horse_id": "J273",
+        "rating": 59
+    },
+    {
+        "horse_id": "K557",
+        "rating": 50
+    },
+    {
+        "horse_id": "L363",
+        "rating": 52
+    },
+    {
+        "horse_id": "K172",
+        "rating": 72
+    },
+    {
+        "horse_id": "J480",
+        "rating": 27
+    },
+    {
+        "horse_id": "K435",
+        "rating": 43
+    },
+    {
+        "horse_id": "L429",
+        "rating": 67
+    },
+    {
+        "horse_id": "K503",
+        "rating": 40
+    },
+    {
+        "horse_id": "H447",
+        "rating": 43
+    },
+    {
+        "horse_id": "K490",
+        "rating": 46
+    },
+    {
+        "horse_id": "J080",
+        "rating": 38
+    },
+    {
+        "horse_id": "J295",
+        "rating": 77
+    },
+    {
+        "horse_id": "L378",
+        "rating": 66
+    },
+    {
+        "horse_id": "H409",
+        "rating": 32
+    },
+    {
+        "horse_id": "H110",
+        "rating": 59
+    },
+    {
+        "horse_id": "K489",
+        "rating": 72
+    },
+    {
+        "horse_id": "J500",
+        "rating": 56
+    },
+    {
+        "horse_id": "L281",
+        "rating": 58
+    },
+    {
+        "horse_id": "K562",
+        "rating": 70
+    },
+    {
+        "horse_id": "K293",
+        "rating": 50
+    },
+    {
+        "horse_id": "K152",
+        "rating": 45
+    },
+    {
+        "horse_id": "K483",
+        "rating": 29
+    },
+    {
+        "horse_id": "L057",
+        "rating": 62
+    },
+    {
+        "horse_id": "K370",
+        "rating": 63
+    },
+    {
+        "horse_id": "J339",
+        "rating": 71
+    },
+    {
+        "horse_id": "K228",
+        "rating": 50
+    },
+    {
+        "horse_id": "J290",
+        "rating": 75
+    },
+    {
+        "horse_id": "K527",
+        "rating": 50
+    },
+    {
+        "horse_id": "K354",
+        "rating": 42
+    },
+    {
+        "horse_id": "K488",
+        "rating": 52
+    },
+    {
+        "horse_id": "K098",
+        "rating": 68
+    },
+    {
+        "horse_id": "K457",
+        "rating": 34
+    },
+    {
+        "horse_id": "K003",
+        "rating": 45
+    },
+    {
+        "horse_id": "L034",
+        "rating": 43
+    },
+    {
+        "horse_id": "L481",
+        "rating": 66
+    },
+    {
+        "horse_id": "L511",
+        "rating": 72
+    },
+    {
+        "horse_id": "K202",
+        "rating": 62
+    },
+    {
+        "horse_id": "L017",
+        "rating": 37
+    },
+    {
+        "horse_id": "J232",
+        "rating": 53
+    },
+    {
+        "horse_id": "K514",
+        "rating": 78
+    },
+    {
+        "horse_id": "L160",
+        "rating": 52
+    },
+    {
+        "horse_id": "L161",
+        "rating": 54
+    },
+    {
+        "horse_id": "J451",
+        "rating": 57
+    },
+    {
+        "horse_id": "H356",
+        "rating": 55
+    },
+    {
+        "horse_id": "L102",
+        "rating": 60
+    },
+    {
+        "horse_id": "J114",
+        "rating": 81
+    },
+    {
+        "horse_id": "L217",
+        "rating": 52
+    },
+    {
+        "horse_id": "L007",
+        "rating": 52
+    },
+    {
+        "horse_id": "K199",
+        "rating": 54
+    },
+    {
+        "horse_id": "J143",
+        "rating": 56
+    },
+    {
+        "horse_id": "J020",
+        "rating": 33
+    },
+    {
+        "horse_id": "L437",
+        "rating": 52
+    },
+    {
+        "horse_id": "L109",
+        "rating": 73
+    },
+    {
+        "horse_id": "J137",
+        "rating": 59
+    },
+    {
+        "horse_id": "K524",
+        "rating": 44
+    },
+    {
+        "horse_id": "H311",
+        "rating": 90
+    },
+    {
+        "horse_id": "H196",
+        "rating": 26
+    },
+    {
+        "horse_id": "H106",
+        "rating": 19
+    },
+    {
+        "horse_id": "L461",
+        "rating": 52
+    },
+    {
+        "horse_id": "L135",
+        "rating": 63
+    },
+    {
+        "horse_id": "E490",
+        "rating": 50
+    },
+    {
+        "horse_id": "K106",
+        "rating": 42
+    },
+    {
+        "horse_id": "L026",
+        "rating": 46
+    },
+    {
+        "horse_id": "L334",
+        "rating": 62
+    },
+    {
+        "horse_id": "H349",
+        "rating": 33
+    },
+    {
+        "horse_id": "K016",
+        "rating": 48
+    },
+    {
+        "horse_id": "J135",
+        "rating": 38
+    },
+    {
+        "horse_id": "K104",
+        "rating": 41
+    },
+    {
+        "horse_id": "J008",
+        "rating": 87
+    },
+    {
+        "horse_id": "L336",
+        "rating": 72
+    },
+    {
+        "horse_id": "L293",
+        "rating": 55
+    },
+    {
+        "horse_id": "K550",
+        "rating": 55
+    },
+    {
+        "horse_id": "J155",
+        "rating": 46
+    },
+    {
+        "horse_id": "L255",
+        "rating": 54
+    },
+    {
+        "horse_id": "K460",
+        "rating": 49
+    },
+    {
+        "horse_id": "J515",
+        "rating": 36
+    },
+    {
+        "horse_id": "L377",
+        "rating": 65
+    },
+    {
+        "horse_id": "J303",
+        "rating": 77
+    },
+    {
+        "horse_id": "J508",
+        "rating": 39
+    },
+    {
+        "horse_id": "L346",
+        "rating": 52
+    },
+    {
+        "horse_id": "K453",
+        "rating": 66
+    },
+    {
+        "horse_id": "L049",
+        "rating": 47
+    },
+    {
+        "horse_id": "L285",
+        "rating": 65
+    },
+    {
+        "horse_id": "L152",
+        "rating": 75
+    },
+    {
+        "horse_id": "J427",
+        "rating": 58
+    },
+    {
+        "horse_id": "K572",
+        "rating": 52
+    },
+    {
+        "horse_id": "H208",
+        "rating": 44
+    },
+    {
+        "horse_id": "J002",
+        "rating": 26
+    },
+    {
+        "horse_id": "J266",
+        "rating": 58
+    },
+    {
+        "horse_id": "J280",
+        "rating": 58
+    },
+    {
+        "horse_id": "L419",
+        "rating": 52
+    },
+    {
+        "horse_id": "J535",
+        "rating": 35
+    },
+    {
+        "horse_id": "L046",
+        "rating": 44
+    },
+    {
+        "horse_id": "H215",
+        "rating": 94
+    },
+    {
+        "horse_id": "H302",
+        "rating": 121
+    },
+    {
+        "horse_id": "K413",
+        "rating": 50
+    },
+    {
+        "horse_id": "L294",
+        "rating": 50
+    },
+    {
+        "horse_id": "L150",
+        "rating": 55
+    },
+    {
+        "horse_id": "L128",
+        "rating": 48
+    },
+    {
+        "horse_id": "L383",
+        "rating": 65
+    },
+    {
+        "horse_id": "K283",
+        "rating": 64
+    },
+    {
+        "horse_id": "K481",
+        "rating": 47
+    },
+    {
+        "horse_id": "J431",
+        "rating": 79
+    },
+    {
+        "horse_id": "K583",
+        "rating": 89
+    },
+    {
+        "horse_id": "L350",
+        "rating": 52
+    },
+    {
+        "horse_id": "L242",
+        "rating": 64
+    },
+    {
+        "horse_id": "L061",
+        "rating": 50
+    },
+    {
+        "horse_id": "K502",
+        "rating": 38
+    },
+    {
+        "horse_id": "K086",
+        "rating": 63
+    },
+    {
+        "horse_id": "K522",
+        "rating": 50
+    },
+    {
+        "horse_id": "K275",
+        "rating": 52
+    },
+    {
+        "horse_id": "L504",
+        "rating": 52
+    },
+    {
+        "horse_id": "L277",
+        "rating": 49
+    },
+    {
+        "horse_id": "K296",
+        "rating": 112
+    },
+    {
+        "horse_id": "K168",
+        "rating": 100
+    },
+    {
+        "horse_id": "L312",
+        "rating": 65
+    },
+    {
+        "horse_id": "L174",
+        "rating": 52
+    },
+    {
+        "horse_id": "J217",
+        "rating": 59
+    },
+    {
+        "horse_id": "L338",
+        "rating": 64
+    },
+    {
+        "horse_id": "L036",
+        "rating": 48
+    },
+    {
+        "horse_id": "L399",
+        "rating": 65
+    },
+    {
+        "horse_id": "L115",
+        "rating": 55
+    },
+    {
+        "horse_id": "K498",
+        "rating": 59
+    },
+    {
+        "horse_id": "L186",
+        "rating": 50
+    },
+    {
+        "horse_id": "L235",
+        "rating": 40
+    },
+    {
+        "horse_id": "L514",
+        "rating": 74
+    },
+    {
+        "horse_id": "K410",
+        "rating": 47
+    },
+    {
+        "horse_id": "K405",
+        "rating": 60
+    },
+    {
+        "horse_id": "L269",
+        "rating": 57
+    },
+    {
+        "horse_id": "K332",
+        "rating": 46
+    },
+    {
+        "horse_id": "L243",
+        "rating": 66
+    },
+    {
+        "horse_id": "K247",
+        "rating": 48
+    },
+    {
+        "horse_id": "K134",
+        "rating": 47
+    },
+    {
+        "horse_id": "J062",
+        "rating": 142
+    },
+    {
+        "horse_id": "J091",
+        "rating": 54
+    },
+    {
+        "horse_id": "H216",
+        "rating": 81
+    },
+    {
+        "horse_id": "G392",
+        "rating": 75
+    },
+    {
+        "horse_id": "G306",
+        "rating": 68
+    },
+    {
+        "horse_id": "J265",
+        "rating": 59
+    },
+    {
+        "horse_id": "K157",
+        "rating": 61
+    },
+    {
+        "horse_id": "K186",
+        "rating": 64
+    },
+    {
+        "horse_id": "H407",
+        "rating": 49
+    },
+    {
+        "horse_id": "K397",
+        "rating": 46
+    },
+    {
+        "horse_id": "J539",
+        "rating": 67
+    },
+    {
+        "horse_id": "L279",
+        "rating": 52
+    },
+    {
+        "horse_id": "L366",
+        "rating": 52
+    },
+    {
+        "horse_id": "L446",
+        "rating": 52
+    },
+    {
+        "horse_id": "L319",
+        "rating": 46
+    },
+    {
+        "horse_id": "L144",
+        "rating": 43
+    },
+    {
+        "horse_id": "K300",
+        "rating": 46
+    },
+    {
+        "horse_id": "H155",
+        "rating": 77
+    },
+    {
+        "horse_id": "K043",
+        "rating": 61
+    },
+    {
+        "horse_id": "L110",
+        "rating": 82
+    },
+    {
+        "horse_id": "L083",
+        "rating": 55
+    },
+    {
+        "horse_id": "L386",
+        "rating": 50
+    },
+    {
+        "horse_id": "H134",
+        "rating": 42
+    },
+    {
+        "horse_id": "L488",
+        "rating": 52
+    },
+    {
+        "horse_id": "K271",
+        "rating": 46
+    },
+    {
+        "horse_id": "L032",
+        "rating": 65
+    },
+    {
+        "horse_id": "K286",
+        "rating": 58
+    },
+    {
+        "horse_id": "L118",
+        "rating": 44
+    },
+    {
+        "horse_id": "K130",
+        "rating": 106
+    },
+    {
+        "horse_id": "K159",
+        "rating": 47
+    },
+    {
+        "horse_id": "L136",
+        "rating": 41
+    },
+    {
+        "horse_id": "K391",
+        "rating": 51
+    },
+    {
+        "horse_id": "L142",
+        "rating": 56
+    },
+    {
+        "horse_id": "K161",
+        "rating": 78
+    },
+    {
+        "horse_id": "K315",
+        "rating": 58
+    },
+    {
+        "horse_id": "L052",
+        "rating": 79
+    },
+    {
+        "horse_id": "H451",
+        "rating": 72
+    },
+    {
+        "horse_id": "K574",
+        "rating": 76
+    },
+    {
+        "horse_id": "L125",
+        "rating": 51
+    },
+    {
+        "horse_id": "K073",
+        "rating": 31
+    },
+    {
+        "horse_id": "L225",
+        "rating": 52
+    },
+    {
+        "horse_id": "J315",
+        "rating": 51
+    },
+    {
+        "horse_id": "K146",
+        "rating": 61
+    },
+    {
+        "horse_id": "K114",
+        "rating": 79
+    },
+    {
+        "horse_id": "G180",
+        "rating": 123
+    },
+    {
+        "horse_id": "K392",
+        "rating": 49
+    },
+    {
+        "horse_id": "E356",
+        "rating": 102
+    },
+    {
+        "horse_id": "K443",
+        "rating": 50
+    },
+    {
+        "horse_id": "J275",
+        "rating": 73
+    },
+    {
+        "horse_id": "K334",
+        "rating": 58
+    },
+    {
+        "horse_id": "L288",
+        "rating": 52
+    },
+    {
+        "horse_id": "J532",
+        "rating": 35
+    },
+    {
+        "horse_id": "J333",
+        "rating": 88
+    },
+    {
+        "horse_id": "K189",
+        "rating": 42
+    },
+    {
+        "horse_id": "L475",
+        "rating": 65
+    },
+    {
+        "horse_id": "K426",
+        "rating": 72
+    },
+    {
+        "horse_id": "J065",
+        "rating": 27
+    },
+    {
+        "horse_id": "K109",
+        "rating": 44
+    },
+    {
+        "horse_id": "K205",
+        "rating": 46
+    },
+    {
+        "horse_id": "J208",
+        "rating": 101
+    },
+    {
+        "horse_id": "K582",
+        "rating": 60
+    },
+    {
+        "horse_id": "L462",
+        "rating": 52
+    },
+    {
+        "horse_id": "J516",
+        "rating": 49
+    },
+    {
+        "horse_id": "J442",
+        "rating": 56
+    },
+    {
+        "horse_id": "H472",
+        "rating": 35
+    },
+    {
+        "horse_id": "L133",
+        "rating": 57
+    },
+    {
+        "horse_id": "K166",
+        "rating": 30
+    },
+    {
+        "horse_id": "L323",
+        "rating": 48
+    },
+    {
+        "horse_id": "K200",
+        "rating": 26
+    },
+    {
+        "horse_id": "L056",
+        "rating": 68
+    },
+    {
+        "horse_id": "L176",
+        "rating": 48
+    },
+    {
+        "horse_id": "K082",
+        "rating": 70
+    },
+    {
+        "horse_id": "J360",
+        "rating": 75
+    },
+    {
+        "horse_id": "L153",
+        "rating": 84
+    },
+    {
+        "horse_id": "J384",
+        "rating": 60
+    },
+    {
+        "horse_id": "K577",
+        "rating": 56
+    },
+    {
+        "horse_id": "J330",
+        "rating": 78
+    },
+    {
+        "horse_id": "J421",
+        "rating": 66
+    },
+    {
+        "horse_id": "L402",
+        "rating": 66
+    },
+    {
+        "horse_id": "H455",
+        "rating": 46
+    },
+    {
+        "horse_id": "K165",
+        "rating": 75
+    },
+    {
+        "horse_id": "H386",
+        "rating": 11
+    },
+    {
+        "horse_id": "K411",
+        "rating": 62
+    },
+    {
+        "horse_id": "H180",
+        "rating": 29
+    },
+    {
+        "horse_id": "L448",
+        "rating": 52
+    },
+    {
+        "horse_id": "K171",
+        "rating": 22
+    },
+    {
+        "horse_id": "L163",
+        "rating": 38
+    },
+    {
+        "horse_id": "J519",
+        "rating": 75
+    },
+    {
+        "horse_id": "L301",
+        "rating": 80
+    },
+    {
+        "horse_id": "J256",
+        "rating": 124
+    },
+    {
+        "horse_id": "J365",
+        "rating": 57
+    },
+    {
+        "horse_id": "L187",
+        "rating": 84
+    },
+    {
+        "horse_id": "J304",
+        "rating": 50
+    },
+    {
+        "horse_id": "J200",
+        "rating": 48
+    },
+    {
+        "horse_id": "E434",
+        "rating": 52
+    },
+    {
+        "horse_id": "H325",
+        "rating": 52
+    },
+    {
+        "horse_id": "K494",
+        "rating": 63
+    },
+    {
+        "horse_id": "H339",
+        "rating": 40
+    },
+    {
+        "horse_id": "K052",
+        "rating": 46
+    },
+    {
+        "horse_id": "L365",
+        "rating": 52
+    },
+    {
+        "horse_id": "L282",
+        "rating": 52
+    },
+    {
+        "horse_id": "L392",
+        "rating": 50
+    },
+    {
+        "horse_id": "J536",
+        "rating": 58
+    },
+    {
+        "horse_id": "J488",
+        "rating": 68
+    },
+    {
+        "horse_id": "J383",
+        "rating": 66
+    },
+    {
+        "horse_id": "K285",
+        "rating": 66
+    },
+    {
+        "horse_id": "K438",
+        "rating": 64
+    },
+    {
+        "horse_id": "K105",
+        "rating": 57
+    },
+    {
+        "horse_id": "L154",
+        "rating": 70
+    },
+    {
+        "horse_id": "K261",
+        "rating": 55
+    },
+    {
+        "horse_id": "J037",
+        "rating": 33
+    },
+    {
+        "horse_id": "K517",
+        "rating": 47
+    },
+    {
+        "horse_id": "H113",
+        "rating": 62
+    },
+    {
+        "horse_id": "L112",
+        "rating": 67
+    },
+    {
+        "horse_id": "J277",
+        "rating": 101
+    },
+    {
+        "horse_id": "L499",
+        "rating": 52
+    },
+    {
+        "horse_id": "K256",
+        "rating": 62
+    },
+    {
+        "horse_id": "H002",
+        "rating": 24
+    },
+    {
+        "horse_id": "H405",
+        "rating": 62
+    },
+    {
+        "horse_id": "L384",
+        "rating": 74
+    },
+    {
+        "horse_id": "J343",
+        "rating": 107
+    },
+    {
+        "horse_id": "L382",
+        "rating": 65
+    },
+    {
+        "horse_id": "J447",
+        "rating": 42
+    },
+    {
+        "horse_id": "L440",
+        "rating": 52
+    },
+    {
+        "horse_id": "J417",
+        "rating": 76
+    },
+    {
+        "horse_id": "E488",
+        "rating": 30
+    },
+    {
+        "horse_id": "L275",
+        "rating": 45
+    },
+    {
+        "horse_id": "J003",
+        "rating": 23
+    },
+    {
+        "horse_id": "J271",
+        "rating": 18
+    },
+    {
+        "horse_id": "L117",
+        "rating": 80
+    },
+    {
+        "horse_id": "G400",
+        "rating": 53
+    },
+    {
+        "horse_id": "H173",
+        "rating": 44
+    },
+    {
+        "horse_id": "L211",
+        "rating": 45
+    },
+    {
+        "horse_id": "J467",
+        "rating": 57
+    },
+    {
+        "horse_id": "L246",
+        "rating": 65
+    },
+    {
+        "horse_id": "L100",
+        "rating": 42
+    },
+    {
+        "horse_id": "K473",
+        "rating": 63
+    },
+    {
+        "horse_id": "L047",
+        "rating": 46
+    },
+    {
+        "horse_id": "L241",
+        "rating": 48
+    },
+    {
+        "horse_id": "L261",
+        "rating": 50
+    },
+    {
+        "horse_id": "K131",
+        "rating": 74
+    },
+    {
+        "horse_id": "K009",
+        "rating": 45
+    },
+    {
+        "horse_id": "L248",
+        "rating": 56
+    },
+    {
+        "horse_id": "L300",
+        "rating": 67
+    },
+    {
+        "horse_id": "G307",
+        "rating": 30
+    },
+    {
+        "horse_id": "L506",
+        "rating": 72
+    },
+    {
+        "horse_id": "L035",
+        "rating": 81
+    },
+    {
+        "horse_id": "L221",
+        "rating": 63
+    },
+    {
+        "horse_id": "H166",
+        "rating": 64
+    },
+    {
+        "horse_id": "K112",
+        "rating": 44
+    },
+    {
+        "horse_id": "L407",
+        "rating": 71
+    },
+    {
+        "horse_id": "H368",
+        "rating": 117
+    },
+    {
+        "horse_id": "K145",
+        "rating": 54
+    },
+    {
+        "horse_id": "K143",
+        "rating": 35
+    },
+    {
+        "horse_id": "L042",
+        "rating": 57
+    },
+    {
+        "horse_id": "K580",
+        "rating": 38
+    },
+    {
+        "horse_id": "L030",
+        "rating": 64
+    },
+    {
+        "horse_id": "K362",
+        "rating": 63
+    },
+    {
+        "horse_id": "K499",
+        "rating": 52
+    },
+    {
+        "horse_id": "L006",
+        "rating": 46
+    },
+    {
+        "horse_id": "J368",
+        "rating": 32
+    },
+    {
+        "horse_id": "K081",
+        "rating": 71
+    },
+    {
+        "horse_id": "K236",
+        "rating": 93
+    },
+    {
+        "horse_id": "L145",
+        "rating": 50
+    },
+    {
+        "horse_id": "L415",
+        "rating": 52
+    },
+    {
+        "horse_id": "H464",
+        "rating": 39
+    },
+    {
+        "horse_id": "K559",
+        "rating": 58
+    },
+    {
+        "horse_id": "H168",
+        "rating": 44
+    },
+    {
+        "horse_id": "G476",
+        "rating": 51
+    },
+    {
+        "horse_id": "K012",
+        "rating": 87
+    },
+    {
+        "horse_id": "J524",
+        "rating": 45
+    },
+    {
+        "horse_id": "L098",
+        "rating": 50
+    },
+    {
+        "horse_id": "K080",
+        "rating": 69
+    },
+    {
+        "horse_id": "K276",
+        "rating": 35
+    },
+    {
+        "horse_id": "L120",
+        "rating": 49
+    },
+    {
+        "horse_id": "K585",
+        "rating": 85
+    },
+    {
+        "horse_id": "H057",
+        "rating": 43
+    },
+    {
+        "horse_id": "J437",
+        "rating": 70
+    },
+    {
+        "horse_id": "L081",
+        "rating": 64
+    },
+    {
+        "horse_id": "L072",
+        "rating": 42
+    },
+    {
+        "horse_id": "H296",
+        "rating": 51
+    },
+    {
+        "horse_id": "G095",
+        "rating": 38
+    },
+    {
+        "horse_id": "K031",
+        "rating": 64
+    },
+    {
+        "horse_id": "L156",
+        "rating": 50
+    },
+    {
+        "horse_id": "L434",
+        "rating": 65
+    },
+    {
+        "horse_id": "L123",
+        "rating": 63
+    },
+    {
+        "horse_id": "K263",
+        "rating": 37
+    },
+    {
+        "horse_id": "K111",
+        "rating": 50
+    },
+    {
+        "horse_id": "L490",
+        "rating": 52
+    },
+    {
+        "horse_id": "L164",
+        "rating": 52
+    },
+    {
+        "horse_id": "J078",
+        "rating": 40
+    },
+    {
+        "horse_id": "J141",
+        "rating": 89
+    },
+    {
+        "horse_id": "K125",
+        "rating": 70
+    },
+    {
+        "horse_id": "J092",
+        "rating": 81
+    },
+    {
+        "horse_id": "K026",
+        "rating": 76
+    },
+    {
+        "horse_id": "K054",
+        "rating": 79
+    },
+    {
+        "horse_id": "G477",
+        "rating": 19
+    },
+    {
+        "horse_id": "K280",
+        "rating": 44
+    },
+    {
+        "horse_id": "L349",
+        "rating": 50
+    },
+    {
+        "horse_id": "J371",
+        "rating": 21
+    },
+    {
+        "horse_id": "K447",
+        "rating": 52
+    },
+    {
+        "horse_id": "L413",
+        "rating": 72
+    },
+    {
+        "horse_id": "J162",
+        "rating": 38
+    },
+    {
+        "horse_id": "J308",
+        "rating": 35
+    },
+    {
+        "horse_id": "K058",
+        "rating": 51
+    },
+    {
+        "horse_id": "J225",
+        "rating": 76
+    },
+    {
+        "horse_id": "K024",
+        "rating": 30
+    },
+    {
+        "horse_id": "L410",
+        "rating": 70
+    },
+    {
+        "horse_id": "J402",
+        "rating": 78
+    },
+    {
+        "horse_id": "K259",
+        "rating": 29
+    },
+    {
+        "horse_id": "H354",
+        "rating": 31
+    },
+    {
+        "horse_id": "L104",
+        "rating": 50
+    },
+    {
+        "horse_id": "H108",
+        "rating": 60
+    },
+    {
+        "horse_id": "K230",
+        "rating": 28
+    },
+    {
+        "horse_id": "J087",
+        "rating": 33
+    },
+    {
+        "horse_id": "K007",
+        "rating": 58
+    },
+    {
+        "horse_id": "K120",
+        "rating": 36
+    },
+    {
+        "horse_id": "L395",
+        "rating": 68
+    },
+    {
+        "horse_id": "J463",
+        "rating": 42
+    },
+    {
+        "horse_id": "K536",
+        "rating": 42
+    },
+    {
+        "horse_id": "L271",
+        "rating": 52
+    },
+    {
+        "horse_id": "K231",
+        "rating": 46
+    },
+    {
+        "horse_id": "L372",
+        "rating": 72
+    },
+    {
+        "horse_id": "J186",
+        "rating": 100
+    },
+    {
+        "horse_id": "L179",
+        "rating": 53
+    },
+    {
+        "horse_id": "J452",
+        "rating": 51
+    },
+    {
+        "horse_id": "J237",
+        "rating": 66
+    },
+    {
+        "horse_id": "L062",
+        "rating": 43
+    },
+    {
+        "horse_id": "K278",
+        "rating": 53
+    },
+    {
+        "horse_id": "L420",
+        "rating": 52
+    },
+    {
+        "horse_id": "H207",
+        "rating": 58
+    },
+    {
+        "horse_id": "L303",
+        "rating": 63
+    },
+    {
+        "horse_id": "H244",
+        "rating": 107
+    },
+    {
+        "horse_id": "L370",
+        "rating": 66
+    },
+    {
+        "horse_id": "K389",
+        "rating": 45
+    },
+    {
+        "horse_id": "K458",
+        "rating": 57
+    },
+    {
+        "horse_id": "J164",
+        "rating": 62
+    },
+    {
+        "horse_id": "L259",
+        "rating": 46
+    },
+    {
+        "horse_id": "J071",
+        "rating": 50
+    },
+    {
+        "horse_id": "H481",
+        "rating": 62
+    },
+    {
+        "horse_id": "H092",
+        "rating": 84
+    },
+    {
+        "horse_id": "H298",
+        "rating": 51
+    },
+    {
+        "horse_id": "L040",
+        "rating": 67
+    },
+    {
+        "horse_id": "L262",
+        "rating": 52
+    },
+    {
+        "horse_id": "K387",
+        "rating": 50
+    },
+    {
+        "horse_id": "L489",
+        "rating": 52
+    },
+    {
+        "horse_id": "G125",
+        "rating": 44
+    },
+    {
+        "horse_id": "H044",
+        "rating": 41
+    },
+    {
+        "horse_id": "G448",
+        "rating": 73
+    },
+    {
+        "horse_id": "L252",
+        "rating": 40
+    },
+    {
+        "horse_id": "L249",
+        "rating": 60
+    },
+    {
+        "horse_id": "L173",
+        "rating": 58
+    },
+    {
+        "horse_id": "L432",
+        "rating": 74
+    },
+    {
+        "horse_id": "J098",
+        "rating": 54
+    },
+    {
+        "horse_id": "L373",
+        "rating": 64
+    },
+    {
+        "horse_id": "J218",
+        "rating": 26
+    },
+    {
+        "horse_id": "L424",
+        "rating": 52
+    },
+    {
+        "horse_id": "L371",
+        "rating": 61
+    },
+    {
+        "horse_id": "K402",
+        "rating": 36
+    },
+    {
+        "horse_id": "J227",
+        "rating": 52
+    },
+    {
+        "horse_id": "H465",
+        "rating": 39
+    },
+    {
+        "horse_id": "K341",
+        "rating": 67
+    },
+    {
+        "horse_id": "K265",
+        "rating": 43
+    },
+    {
+        "horse_id": "J253",
+        "rating": 54
+    },
+    {
+        "horse_id": "L122",
+        "rating": 67
+    },
+    {
+        "horse_id": "K365",
+        "rating": 64
+    },
+    {
+        "horse_id": "L314",
+        "rating": 61
+    },
+    {
+        "horse_id": "L121",
+        "rating": 70
+    },
+    {
+        "horse_id": "K311",
+        "rating": 56
+    },
+    {
+        "horse_id": "L213",
+        "rating": 73
+    },
+    {
+        "horse_id": "G277",
+        "rating": 38
+    },
+    {
+        "horse_id": "H303",
+        "rating": 103
+    },
+    {
+        "horse_id": "K116",
+        "rating": 51
+    },
+    {
+        "horse_id": "K339",
+        "rating": 45
+    },
+    {
+        "horse_id": "L466",
+        "rating": 52
+    },
+    {
+        "horse_id": "L496",
+        "rating": 52
+    },
+    {
+        "horse_id": "L167",
+        "rating": 60
+    },
+    {
+        "horse_id": "L500",
+        "rating": 52
+    },
+    {
+        "horse_id": "L381",
+        "rating": 64
+    },
+    {
+        "horse_id": "J294",
+        "rating": 27
+    },
+    {
+        "horse_id": "L024",
+        "rating": 59
+    },
+    {
+        "horse_id": "H165",
+        "rating": 62
+    },
+    {
+        "horse_id": "K376",
+        "rating": 46
+    },
+    {
+        "horse_id": "L505",
+        "rating": 66
+    },
+    {
+        "horse_id": "L205",
+        "rating": 52
+    },
+    {
+        "horse_id": "L027",
+        "rating": 58
+    },
+    {
+        "horse_id": "L093",
+        "rating": 53
+    },
+    {
+        "horse_id": "K547",
+        "rating": 59
+    },
+    {
+        "horse_id": "G404",
+        "rating": 90
+    },
+    {
+        "horse_id": "J540",
+        "rating": 84
+    },
+    {
+        "horse_id": "L060",
+        "rating": 45
+    },
+    {
+        "horse_id": "L068",
+        "rating": 55
+    },
+    {
+        "horse_id": "L284",
+        "rating": 60
+    },
+    {
+        "horse_id": "L149",
+        "rating": 68
+    },
+    {
+        "horse_id": "L139",
+        "rating": 38
+    },
+    {
+        "horse_id": "L065",
+        "rating": 46
+    },
+    {
+        "horse_id": "L374",
+        "rating": 64
+    },
+    {
+        "horse_id": "K223",
+        "rating": 57
+    },
+    {
+        "horse_id": "K198",
+        "rating": 29
+    },
+    {
+        "horse_id": "E436",
+        "rating": 128
+    },
+    {
+        "horse_id": "L398",
+        "rating": 64
+    },
+    {
+        "horse_id": "J193",
+        "rating": 19
+    },
+    {
+        "horse_id": "K255",
+        "rating": 48
+    },
+    {
+        "horse_id": "K209",
+        "rating": 32
+    },
+    {
+        "horse_id": "L029",
+        "rating": 62
+    },
+    {
+        "horse_id": "L471",
+        "rating": 73
+    },
+    {
+        "horse_id": "K406",
+        "rating": 61
+    },
+    {
+        "horse_id": "L197",
+        "rating": 50
+    },
+    {
+        "horse_id": "L507",
+        "rating": 64
+    },
+    {
+        "horse_id": "L184",
+        "rating": 68
+    },
+    {
+        "horse_id": "L092",
+        "rating": 60
+    },
+    {
+        "horse_id": "L292",
+        "rating": 52
+    },
+    {
+        "horse_id": "K216",
+        "rating": 30
+    },
+    {
+        "horse_id": "H461",
+        "rating": 68
+    },
+    {
+        "horse_id": "J116",
+        "rating": 55
+    },
+    {
+        "horse_id": "K350",
+        "rating": 100
+    },
+    {
+        "horse_id": "K211",
+        "rating": 32
+    },
+    {
+        "horse_id": "K428",
+        "rating": 60
+    },
+    {
+        "horse_id": "L077",
+        "rating": 60
+    },
+    {
+        "horse_id": "K569",
+        "rating": 46
+    },
+    {
+        "horse_id": "J305",
+        "rating": 53
+    },
+    {
+        "horse_id": "K226",
+        "rating": 71
+    },
+    {
+        "horse_id": "K074",
+        "rating": 59
+    },
+    {
+        "horse_id": "J529",
+        "rating": 41
+    },
+    {
+        "horse_id": "L416",
+        "rating": 52
+    },
+    {
+        "horse_id": "L478",
+        "rating": 65
+    },
+    {
+        "horse_id": "K178",
+        "rating": 57
+    },
+    {
+        "horse_id": "K011",
+        "rating": 74
+    },
+    {
+        "horse_id": "K029",
+        "rating": 32
+    },
+    {
+        "horse_id": "L256",
+        "rating": 50
+    },
+    {
+        "horse_id": "J546",
+        "rating": 28
+    },
+    {
+        "horse_id": "L442",
+        "rating": 52
+    },
+    {
+        "horse_id": "L472",
+        "rating": 64
+    },
+    {
+        "horse_id": "L480",
+        "rating": 64
+    },
+    {
+        "horse_id": "L491",
+        "rating": 52
+    },
+    {
+        "horse_id": "L515",
+        "rating": 82
+    }
+]
