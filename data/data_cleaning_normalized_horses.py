@@ -78,12 +78,6 @@ class Data_cleaning_manager_normalize_horses:
         except:
             pass
     
-    def remove_invalid_draw(self):
-        try:
-            self.df = self.df[self.df['draw'] != "---"]
-            self.df = self.df.copy()
-        except:
-            pass
             
     def start_clean(self):
         self.remove_W()

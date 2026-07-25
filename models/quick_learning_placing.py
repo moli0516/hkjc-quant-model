@@ -107,17 +107,31 @@ print("🔮 正在進行特徵映射與冷啟動對齊...")
 # 從歷史數據中取得「每匹馬/騎師/練馬師最後一次出賽後」所累積的最新歷史平滑勝率與速度表現
 # 這一步能防止資料洩漏，並完美獲取最新狀態
 latest_features = [
-    # 基礎平滑
-    "j_smoothed_place_rate", "t_smoothed_place_rate", "jt_smoothed_place_rate", "h_smoothed_place_rate", "d_smoothed_place_rate",
-    # 滾動30/15/5近況
+    # --- 基礎平滑 ---
+    "j_smoothed_place_rate", "t_smoothed_place_rate", "jt_smoothed_place_rate", 
+    "h_smoothed_place_rate", "d_smoothed_place_rate",
+    
+    # --- 滾動30/15/5近況 ---
     "j_smoothed_rolling_30_place_rate", "t_smoothed_rolling_30_place_rate", 
     "jt_smoothed_rolling_15_place_rate", "h_smoothed_rolling_5_place_rate",
-    # 場地、黏地、路程交叉平滑
+    
+    # --- 場地、黏地、路程交叉平滑 ---
     "h_track_smoothed_place_rate", "h_env_smoothed_place_rate", "h_yield_smoothed_place_rate",
     "j_track_smoothed_place_rate", "j_env_smoothed_place_rate", "j_yield_smoothed_place_rate",
     "t_track_smoothed_place_rate", "t_yield_smoothed_place_rate",
-    # 歷史均速 Z-score
-    "h_mean_speed_z_15","h_speed_z_momentum","h_race_count_history","h_rolling_2_speed_z_std","h_rolling_15_speed_z_std"
+    
+    # --- 歷史均速 Z-score ---
+    "h_mean_speed_z_15", "h_speed_z_momentum", "h_race_count_history", 
+    "h_rolling_2_speed_z_std", "h_rolling_15_speed_z_std",
+    
+    # --- [已優化] 強力進階特徵 ---
+    "rating_strength_score",      # 取代原本的 rating
+    "rating_is_real",             # 保留作為模型的輔助開關
+    "adj_draw",                   # 加入考慮跑道偏差後的檔位
+    "draw_speed_interaction",      # 加入檔位與速度的交互訊號
+    
+    "win_odds_inv", # 放入此特徵
+    "log_win_odds"
 ]
 
 # 物理特徵與靜態特徵
@@ -175,13 +189,14 @@ for col in FEATURES:
 # 5. 訓練 XGBoost 臨時模型
 # =====================================================================
 print(f"🤖 正在使用 {len(df_hist_clean)} 條乾淨歷史紀錄訓練 XGBoost...")
-
+today = pd.Timestamp.today().normalize()
+yesterday = today - pd.Timedelta(days=1)
 # 時序劃分驗證集 (最後 60 天)
 df_hist_clean['date'] = pd.to_datetime(df_hist_clean['date'])
-split_date = df_hist_clean['date'].max() - pd.Timedelta(days=60)
+split_date = df_hist_clean['date'].max() - pd.Timedelta(days=30)
 
 train_data = df_hist_clean[df_hist_clean['date'] <= split_date]
-val_data = df_hist_clean[df_hist_clean['date'] > split_date]
+val_data = df_hist_clean[(df_hist_clean['date'] > split_date) & (df_hist_clean['date'] < yesterday)]
 
 X_train, y_train = train_data[FEATURES], train_data[TARGET]
 X_val, y_val = val_data[FEATURES], val_data[TARGET]

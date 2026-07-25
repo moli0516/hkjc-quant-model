@@ -22,7 +22,7 @@ class Hook:
             "RaceNo": actual_no
         }
         try:
-            time.sleep(random.randrange(2.0,4.0))
+            time.sleep(random.uniform(0.5, 2.0))
             response = self.session.get(self.url, params=params, timeout=15)
             print(f"🔗 正在請求: {response.url}")
             
@@ -52,11 +52,12 @@ class Hook:
             "calmonth": str(month).zfill(2)
         }
         try:
-            time.sleep(random.randrange(2.0,4.0))
+            time.sleep(random.uniform(0.5, 2.0))
             response = self.session.get(self.url, params=params, timeout=15)
             print(f"🔗 正在請求: {response.url}")
             
-            html_content = response.content.decode("utf-8", errors="replace")
+            html_content = response.content#.decode("utf-8", errors="replace")
+            print(response.headers.get('Content-Type'))
             soup = BeautifulSoup(html_content, "html.parser")
             
             # 🌟 修正 3：更嚴格的關鍵字檢查
@@ -72,7 +73,7 @@ class Hook:
             return None
     def get_no_params_soup(self):
         try:
-            time.sleep(random.randrange(2,4))
+            time.sleep(random.uniform(0.5, 2.0))
             response = self.session.get(self.url, timeout=15)
             print(f"🔗 正在請求: {response.url}")
             

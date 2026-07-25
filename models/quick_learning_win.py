@@ -2,13 +2,14 @@ import os
 import pandas as pd
 import numpy as np
 import xgboost as xgb
+from config.settings import settings
 
 # =====================================================================
 # 1. 基礎設定與數據載入
 # =====================================================================
 print("💡 正在啟動快活谷夜賽量化推理引擎（Schema 對齊版）...")
 
-HISTORICAL_PARQUET_PATH = "horse_win_rate.parquet"  # 📌 請替換為你的 parquet 檔案路徑
+HISTORICAL_PARQUET_PATH = settings.features_parquet_path # 📌 請替換為你的 parquet 檔案路徑
 
 if not os.path.exists(HISTORICAL_PARQUET_PATH):
     raise FileNotFoundError(f"找不到歷史數據 Parquet 檔案：{HISTORICAL_PARQUET_PATH}")
