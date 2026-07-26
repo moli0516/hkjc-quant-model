@@ -30,6 +30,14 @@ class Settings:
     @property
     def raw_json_dir(self):
         return self.root_dir / self._data.get("paths", {}).get("raw_json_dir", "")
+    
+    @property
+    def raw_races_json_dir(self):
+        return self.raw_json_dir / self._data.get("paths", {}).get("raw_races_json_dir", "")
+        
+    @property
+    def raw_sectional_json_dir(self):
+        return self.raw_json_dir / self._data.get("paths", {}).get("raw_sectional_json_dir", "")
 
     @property
     def flattened_json_dir(self):

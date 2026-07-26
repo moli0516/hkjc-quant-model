@@ -9,3 +9,9 @@ createFolder.py
 notebooks
 anaconda_projects
 .virtual_documents
+.vscode/
+backtests/
+config/*.json
+scraper_old/
+predict.py
+tests/
