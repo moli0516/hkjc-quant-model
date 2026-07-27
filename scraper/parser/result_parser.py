@@ -87,13 +87,19 @@ class ResultParser:
                     "draw": None,             # 檔位 (int / None)
                     "margin": "",             # 與頭馬距離 / 勝負距離 (str)
                     "finish_time": "",        # 完成時間 (str)
-                    "odds": None              # 獨贏賠率 (float / None)
+                    "odds": None,              # 獨贏賠率 (float / None)
+                    "horse_id": ""
                 }
                 key_list = list(horse_params.keys())
                 cols = row.css("td")
 
                 for i, col in enumerate(cols):
                     val = col.text(strip=True)
+                    if i == 2:
+                        a = col.css_first('a')
+                        if a:
+                            href = a.attributes.get('href')
+                            horse_params["horse_id"] = href.split("=")[1]
                     if i != 9:
                         try:
                             val = float(val)

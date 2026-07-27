@@ -22,12 +22,17 @@ class SectionalParser():
         for tr in trs:
             sectional_params = {
                 "horse_name": "",
+                "horse_id": "", 
                 "sectional_details": []
             }
             tds = tr.css("td")
             for i, td in enumerate(tds[:-1]):
                 if i == 2:
                     sectional_params["horse_name"] = td.text(strip=True)
+                    a = td.css_first('a')
+                    if a:
+                        href = a.attributes.get('href')
+                        sectional_params["horse_id"] = href.split("=")[1]
                 elif i > 2:
                     if td.css_first("img") is None:
                         sectional_detailed_params = {

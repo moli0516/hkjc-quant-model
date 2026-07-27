@@ -14,7 +14,7 @@ class Hook:
         self._sectional_endpoint = f"{self._domain}/zh-hk/local/information/displaysectionaltime"
         self._calendar_endpoint = f"{self._domain}/zh-hk/local/information/fixture" # 或對應的日曆 endpoint
         self._rating_endpoint = f"{self._domain}/racing/info/mcs/Chinese/Horses/clas/?&rf=http://racing.hkjc.com/zh-hk/local/information/latestonhorse?View=Horses/clas/&pageid=racing/local"
-        
+        self._horse_endpoint = f"{self._domain}/zh-hk/local/information/horse"
         self.headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -101,6 +101,13 @@ class Hook:
             "calmonth": str(month).zfill(2)
         }
         return await self._fetch(self._calendar_endpoint, params=params)
+    
+    async def get_horse_tree(self, horse_id: str) -> Optional[Tuple[HTMLParser, str]]:
+        """非同步獲取 [賽事日曆] 頁面"""
+        params = {
+            "horseid": horse_id
+        }
+        return await self._fetch(self._horse_endpoint, params=params)
 
     async def get_rating_tree(self) -> Optional[Tuple[HTMLParser, str]]:
         """非同步獲取預設首頁"""

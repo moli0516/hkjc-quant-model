@@ -34,6 +34,7 @@
         "raw_json_dir": "data/raw_json",
         "raw_races_json_dir": "races",
         "raw_sectional_json_dir": "sectional",
+        "raw_horses_json_dir": "horses",
         "horses_sub_dir": "horses",
         "races_sub_dir": "races",
         "flattened_json_dir": "data/cleaned_json/flatten",
