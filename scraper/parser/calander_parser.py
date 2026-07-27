@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Set
 from selectolax.parser import HTMLParser
-from hook import Hook
+from scraper.hook import Hook
 
 
 class CalendarParser:

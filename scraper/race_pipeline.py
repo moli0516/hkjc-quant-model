@@ -4,11 +4,11 @@ import traceback
 from typing import List, Optional, Dict, Any, Tuple
 
 from config.settings import settings
-from hook import Hook
-from parser.calander_parser import get_all_date_async
-from parser.result_parser import ResultParser
-from parser.sectional_parser import SectionalParser
-from data_manager import DataManager
+from scraper.hook import Hook
+from scraper.parser.calander_parser import get_all_date_async
+from scraper.parser.result_parser import ResultParser
+from scraper.parser.sectional_parser import SectionalParser
+from scraper.data_manager import DataManager
 
 
 class RaceScrapingPipeline:

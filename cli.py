@@ -5,12 +5,11 @@ from pathlib import Path
 # 假設專案模組引用
 try:
     #from cleaners.horse_cleaner import HorseCleaner
-    from cleaners.races_sectional_cleaner import BatchDataCleanerNormalized
+    from cleaners.cleaner_pipeline import CleaningPipeline
     from config.settings import settings
     from database.db_manager import DBManager
     from scraper.horse_pipeline import HorseScrapingPipeline
     from scraper.race_pipeline import RaceScrapingPipeline
-    from scraper.data_manager import DataManager
 except ImportError as e:
     print(f"❌ 模組匯入失敗，請確認執行路徑與專案目錄結構: {e}")
     sys.exit(1)
@@ -40,7 +39,7 @@ class HKJCCLI:
 
     def run_race_cleaner(self):
         print("🧹 [Step 2] 開始執行：賽果與分段時間數據清洗...")
-        cleaner = BatchDataCleanerNormalized()
+        cleaner = CleaningPipeline()
         cleaner.run()
         print("✅ 賽果與分段時間數據清洗完成，已寫入資料庫！\n")
 

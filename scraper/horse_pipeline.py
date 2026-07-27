@@ -4,9 +4,9 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple
 
 from config.settings import settings
-from data_manager import DataManager
-from hook import Hook
-from parser.horse_parser import HorseProfileParser
+from scraper.data_manager import DataManager
+from scraper.hook import Hook
+from scraper.parser.horse_parser import HorseProfileParser
 
 
 class HorseScrapingPipeline:

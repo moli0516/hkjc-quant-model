@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 from selectolax.parser import HTMLParser
-from hook import Hook
+from scraper.hook import Hook
 
 class RatingParser:
     def __init__(self, tree: HTMLParser, current_url: str = ""):

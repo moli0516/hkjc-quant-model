@@ -3,8 +3,7 @@
 *__pycache__/
 *.db
 *.parquet
-data/cleaned_json
-data/raw_json
+data/
 createFolder.py
 notebooks
 anaconda_projects
@@ -15,3 +14,4 @@ config/*.json
 scraper_old/
 predict.py
 tests/
+*.json
