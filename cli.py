@@ -127,11 +127,10 @@ def main():
     )
     parser.add_argument(
         "--clean-horses",
-        action="store_true",
-        help="[暫未開放] 執行馬匹資料數據清洗",
+        action="store_true"
     )
     parser.add_argument(
-        "--all", action="store_true", help="依序執行全部步驟 (1 ➔ 2 ➔ 3)"
+        "--all", action="store_true", help="依序執行全部步驟 (1 ➔ 2 ➔ 3 ➔ 4)"
     )
 
     parser.add_argument(
@@ -178,8 +177,7 @@ def main():
         cli.run_horse_scraper()
 
     if args.clean_horses:
-        print("ℹ️ 馬匹資料數據清洗功能暫未開放/維護中。\n")
-        # cli.run_horse_cleaner()
+        cli.run_horse_cleaner()
 
 
 if __name__ == "__main__":
