@@ -1,10 +1,11 @@
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
 # 假設專案模組引用
 try:
-    #from cleaners.horse_cleaner import HorseCleaner
+    # from cleaners.horse_cleaner import HorseCleaner
     from cleaners.cleaner_pipeline import CleaningPipeline
     from config.settings import settings
     from database.db_manager import DBManager
@@ -40,7 +41,7 @@ class HKJCCLI:
     def run_race_cleaner(self):
         print("🧹 [Step 2] 開始執行：賽果與分段時間數據清洗...")
         cleaner = CleaningPipeline()
-        cleaner.run()
+        cleaner.run(action="race_sectional")
         print("✅ 賽果與分段時間數據清洗完成，已寫入資料庫！\n")
 
     def run_horse_scraper(self):
@@ -55,16 +56,17 @@ class HKJCCLI:
 
         if horse_ids:
             scraper = HorseScrapingPipeline()
-            scraper.run(horse_ids)
+            # 解決 RuntimeWarning: 透過 asyncio.run 驅動 async coroutine
+            asyncio.run(scraper.run(horse_ids))
             print("✅ 馬匹資料爬蟲完成！\n")
         else:
             print("ℹ️ 沒有需要爬取的馬匹 ID。\n")
 
-    #def run_horse_cleaner(self):
-    #    print("🧹 [Step 4] 開始執行：馬匹資料數據清洗...")
-    #    cleaner = HorseCleaner()
-    #    cleaner.run()
-    #    print("✅ 馬匹資料數據清洗完成，已更新至資料庫！\n")
+    def run_horse_cleaner(self):
+        print("🧹 [Step 4] 開始執行：馬匹資料數據清洗...")
+        cleaner = CleaningPipeline()
+        cleaner.run(action="horse")
+        print("✅ 馬匹資料數據清洗完成，已更新至資料庫！\n")
 
     # ---------------- 互動式選單 ----------------
     def interactive_menu(self):
@@ -75,8 +77,8 @@ class HKJCCLI:
             print("1. 執行賽果和分段時間爬蟲")
             print("2. 進行賽果和分段時間數據清洗")
             print("3. 執行馬匹資料爬蟲 (需要先有賽果資料庫)")
-            print("4. 進行馬匹資料數據清洗")
-            print("5. ⚡ 執行一鍵全套 Pipeline (1 ➔ 2 ➔ 3 ➔ 4)")
+            print("4. [暫未開放] 進行馬匹資料數據清洗")
+            print("5. ⚡ 執行一鍵全套 Pipeline (1 ➔ 2 ➔ 3)")
             print("0. 退出系統")
             print("=" * 45)
 
@@ -88,8 +90,8 @@ class HKJCCLI:
                 self.run_race_cleaner()
             elif choice == "3":
                 self.run_horse_scraper()
-            #elif choice == "4":
-                #self.run_horse_cleaner()
+            elif choice == "4":
+                self.run_horse_cleaner()
             elif choice == "5":
                 print("\n🔄 開始一鍵執行全套 Pipeline...")
                 self.run_race_scraper()
@@ -124,10 +126,12 @@ def main():
         help="執行馬匹資料爬蟲 (需先有賽果 DB)",
     )
     parser.add_argument(
-        "--clean-horses", action="store_true", help="執行馬匹資料數據清洗"
+        "--clean-horses",
+        action="store_true",
+        help="[暫未開放] 執行馬匹資料數據清洗",
     )
     parser.add_argument(
-        "--all", action="store_true", help="依序執行全部步驟 (1 ➔ 2 ➔ 3 ➔ 4)"
+        "--all", action="store_true", help="依序執行全部步驟 (1 ➔ 2 ➔ 3)"
     )
 
     parser.add_argument(
@@ -159,7 +163,7 @@ def main():
         cli.run_race_cleaner()
         if cli.check_db_has_races():
             cli.run_horse_scraper()
-            cli.run_horse_cleaner()
+            # cli.run_horse_cleaner()
         return
 
     if args.scrape_races:
@@ -174,7 +178,8 @@ def main():
         cli.run_horse_scraper()
 
     if args.clean_horses:
-        cli.run_horse_cleaner()
+        print("ℹ️ 馬匹資料數據清洗功能暫未開放/維護中。\n")
+        # cli.run_horse_cleaner()
 
 
 if __name__ == "__main__":

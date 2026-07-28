@@ -98,7 +98,7 @@ class HorseScrapingPipeline:
                 )
 
                 if profile_data:
-                    await self.horse_db.save_races_json(
+                    await self.horse_db.save_normal_json(
                         horse_code, profile_data
                     )
                     print(f"✅ [成功] 馬匹 {horse_code} 資料已存檔。")

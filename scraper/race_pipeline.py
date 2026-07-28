@@ -92,7 +92,7 @@ class RaceScrapingPipeline:
 
     async def process_day(self, hook: Hook, date_str: str) -> None:
         async with self.semaphore:
-            if self.races_db.check_file_exist(date_str) and self.sectional_db.check_file_exist(date_str):
+            if self.races_db.check_file_exist(date_str) and self.sectional_db.check_file_exist(date_str, "race"):
                 print(f"⏩ [跳過] 日期 {date_str} 本地賽果與分段檔案均已存在。")
                 return
 

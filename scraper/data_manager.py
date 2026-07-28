@@ -14,9 +14,16 @@ class DataManager:
         formatted_date = f"{date_str[:4]}-{date_str[5:7]}-{date_str[8:]}"
         return self.json_path / f"{formatted_date}.json"
 
-    def check_file_exist(self, date_str: str) -> bool:
-        """檢查該日期的 JSON 是否已存在"""
-        return self._get_date_file_path(date_str).is_file()
+    def check_file_exist(self, key_id: str, file_type: str = "horse") -> bool:
+        """通用檢查檔案是否存在"""
+        clean_id = key_id.strip().upper()
+
+        if file_type == "horse":
+            file_path = settings.raw_horses_json_dir / f"{clean_id}.json"
+        elif file_type == "race":
+            file_path = self._get_date_file_path(clean_id)
+
+        return file_path.is_file()
 
     async def save_races_json(self, date_str: str, params: Dict[str, Any]) -> None:
         """非同步儲存單日賽果 JSON"""
