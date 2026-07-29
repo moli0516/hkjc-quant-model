@@ -21,3 +21,4 @@ project_codebase.txt
 file_create.py
 code_packer.py
 train.py
+models_old/
