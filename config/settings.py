@@ -74,7 +74,35 @@ class Settings:
     @property
     def target(self):
         return self._data.get("target", [])
+        
     def get_feature_group(self, group_name):
         return self._data.get("feature_groups", {}).get(group_name, [])
-    
+
+    # ------------------ 新增: DataLoader 屬性 ------------------
+
+    @property
+    def data_loader_config(self):
+        """獲取完整 data_loader 設定字典"""
+        return self._data.get("data_loader", {})
+
+    @property
+    def id_cols(self):
+        """主鍵與識別欄位"""
+        return self.data_loader_config.get("id_cols", ["race_id", "horse_id", "horse_name"])
+
+    @property
+    def target_cols(self):
+        """目標/標籤欄位"""
+        return self.data_loader_config.get("target_cols", ["placing", "is_win", "is_top3"])
+
+    @property
+    def eval_cols(self):
+        """評估與特徵排除欄位"""
+        return self.data_loader_config.get("eval_cols", ["win_odds", "draw", "jockey", "trainer", "date"])
+
+    @property
+    def categorical_cols(self):
+        """類別型特徵欄位"""
+        return self.data_loader_config.get("categorical_cols", ["brand_prefix", "course_type", "track_draw_key"])
+
 settings = Settings()

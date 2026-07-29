@@ -43,6 +43,12 @@
         "features_parquet_path": "data/features.parquet",
         "today_rc_json_path": "data/today_rc.json"
     },
+    "data_loader": {
+        "id_cols": ["race_id", "horse_id", "horse_name"],
+        "target_cols": ["placing", "is_win", "is_top3"],
+        "eval_cols": ["win_odds", "draw", "jockey", "trainer", "date"],
+        "categorical_cols": ["brand_prefix", "course_type", "track_draw_key"]
+    },
     "base_features": [
         "j_smoothed_win_rate",
         "form_x_rank_weight",
