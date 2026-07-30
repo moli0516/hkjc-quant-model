@@ -11,6 +11,7 @@ class BaseTargetBuilder:
     與 Schema 對齊：
     - 主表: races (race_id, date, venue, distance, track_type, track_condition, track_texture, race_class)
     - 賽果: race_results (race_id, horse_id, placing, draw, jockey, trainer, actual_weight, declared_weight, win_odds, finish_time_sec)
+    - 馬匹: horses (horse_code, import_date, sire)
     """
 
     PRIMARY_KEYS = ["race_id", "horse_id"]
@@ -38,6 +39,8 @@ class BaseTargetBuilder:
         "finish_time_sec",
         "margin_len",
         "rating",
+        "import_date",  # 🌟 補齊 SQL 選取的馬匹抵港日期
+        "sire",         # 🌟 補齊 SQL 選取的父系/種馬
     ]
 
     @classmethod
@@ -55,17 +58,20 @@ class BaseTargetBuilder:
         # 3. 按時間嚴格排序 (防止 Data Leakage)
         df = cls._sort_by_time(df)
 
-        # 4. 生成目標變數 (Targets)
+        # 4. 嚴格防範 import_date 未來時間洩漏 (Temporal Leakage Guard)
+        df = cls._apply_temporal_guard(df)
+
+        # 5. 生成目標變數 (Targets)
         df = cls._create_targets(df)
 
-        # 5. 保留 Context + Targets
+        # 6. 保留 Context + Targets
         target_cols = ["target_win", "target_place", "target_rank_score"]
         keep_cols = [
             c for c in cls.CONTEXT_COLS if c in df.columns
         ] + target_cols
         df_base = df[keep_cols].copy()
 
-        # 6. 資料品質檢查
+        # 7. 資料品質檢查
         LeakageGuard.validate_feature_dataframe(
             df_base, required_keys=cls.PRIMARY_KEYS
         )
@@ -100,9 +106,12 @@ class BaseTargetBuilder:
                     res.win_odds,
                     res.finish_time_sec,
                     res.margin_len,
-                    res.rating
-                FROM races r
-                INNER JOIN race_results res ON r.race_id = res.race_id
+                    res.rating,
+                    h.import_date,
+                    h.sire
+                FROM race_results res
+                INNER JOIN races r ON res.race_id = r.race_id
+                LEFT JOIN horses h ON res.horse_id = h.horse_code
             """
         with sqlite3.connect(db_path) as conn:
             df_raw = pd.read_sql_query(query, conn)
@@ -112,31 +121,17 @@ class BaseTargetBuilder:
     @staticmethod
     def _sanitize_data(df: pd.DataFrame) -> pd.DataFrame:
         """清洗退跑、無效名次與 Null 值。"""
-        # 處理名次欄位 (placing)
         df["placing_str"] = df["placing"].astype(str).str.upper().str.strip()
 
-        # 剔除退跑/未完成/異常標籤
         invalid_pos_keywords = [
-            "WV",
-            "SCR",
-            "DNF",
-            "DISQ",
-            "FE",
-            "PU",
-            "UR",
-            "NAN",
-            "NONE",
+            "WV", "SCR", "DNF", "DISQ", "FE", "PU", "UR", "NAN", "NONE"
         ]
-        valid_mask = ~df["placing_str"].isin(invalid_pos_keywords) & df[
-            "placing"
-        ].notnull()
+        valid_mask = ~df["placing_str"].isin(invalid_pos_keywords) & df["placing"].notnull()
         df = df[valid_mask].copy()
 
-        # 轉為純數值名次
         df["craft_rank"] = pd.to_numeric(df["placing"], errors="coerce")
         df = df[df["craft_rank"].notnull() & (df["craft_rank"] > 0)].copy()
 
-        # 確保 Primary Keys 沒有缺失
         df = df[df["race_id"].notnull() & df["horse_id"].notnull()].copy()
         return df
 
@@ -150,15 +145,21 @@ class BaseTargetBuilder:
         return df
 
     @staticmethod
+    def _apply_temporal_guard(df: pd.DataFrame) -> pd.DataFrame:
+        """🔒 防洩漏關鍵：若 import_date 晚於比賽日期，將其屏蔽為 NaT，避免未來的抵港紀錄滲透到過去賽事。"""
+        if "import_date" in df.columns:
+            import_dt = pd.to_datetime(df["import_date"], errors="coerce")
+            race_dt = pd.to_datetime(df["race_date"], errors="coerce")
+            
+            # 若抵港時間在比賽時間之後，判定為時間異常/未到港資訊洩漏，改為 NaT
+            future_mask = import_dt > race_dt
+            df.loc[future_mask, "import_date"] = pd.NaT
+        return df
+
+    @staticmethod
     def _create_targets(df: pd.DataFrame) -> pd.DataFrame:
         """生成三個標準標籤。"""
-        # Target 1: 勝出 (1st)
         df["target_win"] = (df["craft_rank"] == 1).astype(int)
-
-        # Target 2: 上名 (Top 3)
         df["target_place"] = (df["craft_rank"] <= 3).astype(int)
-
-        # Target 3: 排序分數 (LTR)
         df["target_rank_score"] = 1.0 / df["craft_rank"]
-
         return df

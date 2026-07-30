@@ -7,6 +7,8 @@ class InteractionGenerator:
 
     """生成交叉權重與高級交互特徵。"""
 
+    EXECUTION_ORDER = 999  # 交叉特徵 Generator 必須排在最後面！
+
     def __init__(self, key_cols: list[str] = None):
         self.key_cols = key_cols or ["race_id", "horse_id"]
 

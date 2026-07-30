@@ -24,99 +24,114 @@ class FeaturesPipeline:
             f"🚀 [Pipeline] 開始執行特徵生成 (共自動載入 {len(self.generators)} 個 Generators, 輸入筆數: {len(df)})"
         )
 
-        working_df = df.copy()
+        # -------------------------------------------------------------------------
+        # 🔒 [防洩漏靈魂步驟 1] 保留原始 Index 順序，並強制按【時間】嚴格排序
+        # -------------------------------------------------------------------------
+        original_index = df.index
+
+        if "date" in df.columns:
+            # 確保按照時間序列排序，避免 Rolling/Expanding 計算時發生未來的資料洩漏
+            working_df = df.sort_values(["date", "race_id", "horse_id"]).copy()
+        else:
+            working_df = df.copy()
+
+        # -------------------------------------------------------------------------
+        # 🛡️ [防洩漏靈魂步驟 2] 驗證時間與 Target 資料合規性
+        # -------------------------------------------------------------------------
+        if hasattr(LeakageGuard, "check_dataframe"):
+            LeakageGuard.check_dataframe(working_df)
+
         collected_feature_dfs: List[pd.DataFrame] = []
-        
-        # 💡 用於追蹤已存在的特徵欄位名稱 (包含原始 df 的欄位)
+
+        # 💡 用於追蹤已存在的特徵欄位名稱 (包含原始 df 的欄位)，排除 key_cols 避免干擾
         existing_cols = set(working_df.columns)
 
         for gen in self.generators:
             gen_name = gen.__class__.__name__
-            try:
-                gen_features = gen.generate(working_df)
-                
-                LeakageGuard.validate_feature_dataframe(
-                    gen_features, self.key_cols
-                )
+            print(f"  ⚡ 正在執行 Generator: {gen_name}...")
 
-                # 1. 提煉特徵欄位 (排除 key_cols)
-                feature_cols = [
-                    c for c in gen_features.columns if c not in self.key_cols
+            # 執行 Generator 生成特徵
+            feat_df = gen.generate(working_df)
+
+            if feat_df is None or feat_df.empty:
+                print(f"  ⚠️ [Warning] {gen_name} 未產出任何特徵，跳過。")
+                continue
+
+            # ---------------------------------------------------------------------
+            # 💡 [欄位防重名與數據清理]
+            # ---------------------------------------------------------------------
+            # 1. 只挑出非 Key 欄位且尚未在 existing_cols 中出現過的「新特徵欄位」
+            new_feature_cols = [
+                col
+                for col in feat_df.columns
+                if col not in self.key_cols and col not in existing_cols
+            ]
+
+            if not new_feature_cols:
+                # 檢查是否因為缺少必要欄位而直接 returned 特徵空殼
+                gen_cols_non_key = [
+                    col for col in feat_df.columns if col not in self.key_cols
                 ]
+                if not gen_cols_non_key:
+                    print(
+                        f"  ⚠️ [Warning] {gen_name} 因缺少輸入必要欄位，未生成任何新特徵。"
+                    )
+                else:
+                    print(
+                        f"  ℹ️ {gen_name} 產出的欄位 ({gen_cols_non_key}) 皆已存在於輸入數據中，跳過。"
+                    )
+                continue
 
-                if feature_cols:
-                    gen_features_aligned = gen_features.reindex(working_df.index)
+            # 僅保留純新特徵欄位 (Key 欄位將在最後統一拼合)
+            clean_feat_df = feat_df[new_feature_cols].copy()
 
-                    # 2. 轉 float32
-                    for col in feature_cols:
-                        if gen_features_aligned[col].dtype == "float64":
-                            gen_features_aligned[col] = gen_features_aligned[col].astype("float32")
+            # 2. 自動將 float64 轉為 float32 以節省記憶體並防止碎片化
+            float64_cols = clean_feat_df.select_dtypes(
+                include=["float64"]
+            ).columns
+            if len(float64_cols) > 0:
+                clean_feat_df[float64_cols] = clean_feat_df[
+                    float64_cols
+                ].astype("float32")
 
-                    # 🚨 關鍵防護：檢查是否有與先前重複的特徵名稱！
-                    duplicate_cols = [c for c in feature_cols if c in existing_cols]
-                    if duplicate_cols:
-                        print(f"  ⚠️ [{gen_name}] 警告：發現重複特徵 {duplicate_cols}，將自動排除重複欄位")
-                        # 覆蓋或過濾掉重複欄位
-                        feature_cols = [c for c in feature_cols if c not in duplicate_cols]
+            # 3. 更新已存在的欄位集合
+            existing_cols.update(new_feature_cols)
 
-                    if feature_cols:
-                        pure_features = gen_features_aligned[feature_cols]
-                        collected_feature_dfs.append(pure_features)
+            # 4. 收集結果 DataFrame
+            collected_feature_dfs.append(clean_feat_df)
 
-                        # 更新 existing_cols 記錄
-                        existing_cols.update(feature_cols)
+            # 5. 選擇性動態將新特徵併回 working_df，供後續有依賴關係的 Generator 使用
+            # (例如 PaceStrategyGenerator 依賴 RunningPositionGenerator 的產出)
+            working_df = pd.concat([working_df, clean_feat_df], axis=1)
 
-                        # 併入 working_df 供後續 Generator 使用
-                        working_df = pd.concat([working_df, pure_features], axis=1)
+            # 手動釋放暫存記憶體
+            gc.collect()
 
-                print(
-                    f"  ✅ [{gen_name}] 成功 (新特徵數: {len(feature_cols)})"
-                )
+        if not collected_feature_dfs:
+            raise RuntimeError(
+                "[FeaturesPipeline] 没有任何 Generator 成功生成特徵！"
+            )
 
-            except Exception as e:
-                print(f"  ❌ [{gen_name}] 執行失敗: {e}")
-                raise e
-            finally:
-                gc.collect()
+        # -------------------------------------------------------------------------
+        # 🚀 [零碎片化特徵合併、Key 欄位保留與 Index 恢復]
+        # -------------------------------------------------------------------------
+        print("📦 [Pipeline] 正在高效併合所有特徵矩陣 (含 Key 欄位)...")
 
-        print("⚡ [Pipeline] 正在一次性拼裝最終特徵矩陣...")
-        base_keys = working_df[self.key_cols]
-        feature_matrix = pd.concat([base_keys] + collected_feature_dfs, axis=1)
+        # 1. 提取 Key 欄位 (確保包含 self.key_cols，例如 race_id, horse_id)
+        present_keys = [
+            col for col in self.key_cols if col in working_df.columns
+        ]
+        keys_df = working_df[present_keys].copy()
 
-        LeakageGuard.validate_feature_dataframe(feature_matrix, self.key_cols)
-        
-        del working_df, collected_feature_dfs
-        gc.collect()
+        # 2. 一次性併合 Keys 與所有生成出的特徵 DataFrame
+        generated_features_df = pd.concat(collected_feature_dfs, axis=1)
+        final_features_df = pd.concat([keys_df, generated_features_df], axis=1)
 
-        total_features = feature_matrix.shape[1] - len(self.key_cols)
+        # 🔒 [防洩漏與對齊靈魂步驟 3] 恢復為傳入時的原始 Index 順序
+        final_features_df = final_features_df.reindex(original_index)
+
         print(
-            f"🎉 [Pipeline] 特徵工程完成！總特徵數: {total_features} 個"
+            f"✅ [Pipeline] 特徵工程完成！總共產出 {final_features_df.shape[1]} 個欄位 (含 Keys: {present_keys})，筆數: {len(final_features_df)}"
         )
-        return feature_matrix
 
-    def run_and_save(
-        self,
-        df: pd.DataFrame,
-        output_type: str = "sqlite",
-        destination: str = "data/features.db",
-        table_name: str = "feature_matrix",
-    ) -> pd.DataFrame:
-        features_df = self.run(df)
-        os.makedirs(os.path.dirname(destination), exist_ok=True)
-
-        output_type_lower = output_type.lower()
-        if output_type_lower == "sqlite":
-            with sqlite3.connect(destination) as conn:
-                features_df.to_sql(
-                    table_name, conn, if_exists="replace", index=False
-                )
-            print(f"💾 已存入 SQLite: '{destination}' (Table: {table_name})")
-
-        elif output_type_lower in ["parquet", "pq"]:
-            features_df.to_parquet(destination, index=False)
-            print(f"💾 已存入 Parquet: '{destination}'")
-
-        else:
-            raise ValueError(f"不支援的 output_type: '{output_type}'")
-
-        return features_df
+        return final_features_df

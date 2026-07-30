@@ -99,57 +99,69 @@ class DBManager:
             results = conn.execute(query).fetchall()
             return [row[0] for row in results if row[0]]
 
-    def load_merged_race_data_by_dates(
-        self, start_date: str, end_date: str
-    ) -> pd.DataFrame:
-        """只提取指定日期範圍內的賽事數據，避免全量載入導致 OOM"""
+    def load_all_merged_race_data(self) -> pd.DataFrame:
+        """一次性載入資料庫內所有賽事與馬匹數據"""
         query = text("""
             SELECT 
-                r.race_id,
-                r.date,
-                r.venue,
-                r.race_no,
-                r.race_class,
-                r.distance,
-                r.track_condition,
-                r.track_texture,
-                r.track_type,
-                
-                res.horse_id,
-                res.horse_name,
-                res.placing,
-                res.draw,
-                res.jockey,
-                res.trainer,
-                res.actual_weight,
-                res.declared_weight,
-                res.win_odds,
-                res.finish_time_sec,
-                res.margin_len,
-                res.rating,
-                
-                h.import_date,
-                h.sire,
-                
-                sec.section_no,
-                sec.position,
-                sec.sectional_time_sec,
-                sec.margin_behind
-                
-            FROM race_results res
-            INNER JOIN races r ON res.race_id = r.race_id
-            LEFT JOIN horses h ON res.horse_id = h.horse_code
-            LEFT JOIN race_sectionals sec ON res.race_id = sec.race_id AND res.horse_id = sec.horse_id
-            WHERE r.date >= :start_date AND r.date <= :end_date
-            ORDER BY r.date ASC, r.race_id ASC, res.horse_id ASC
-        """)
+            r.race_id,
+            r.date,
+            r.venue,
+            r.race_no,
+            r.race_class,
+            r.distance,
+            r.track_condition,
+            r.track_texture,
+            r.track_type,
+            
+            res.horse_id,
+            res.horse_name,
+            res.placing,
+            res.draw,
+            res.jockey,
+            res.trainer,
+            res.actual_weight,
+            res.declared_weight,
+            res.win_odds,
+            res.finish_time_sec,
+            res.margin_len,
+            res.rating,
+            
+            h.import_date,
+            h.sire,
+
+            -- 🌟 關鍵：將分段資料轉置成單欄（以 1200m ~ 2000m 常見的 3~4 個分段為例）
+            MAX(CASE WHEN sec.section_no = 1 THEN sec.sectional_time_sec END) AS sec1_time,
+            MAX(CASE WHEN sec.section_no = 2 THEN sec.sectional_time_sec END) AS sec2_time,
+            MAX(CASE WHEN sec.section_no = 3 THEN sec.sectional_time_sec END) AS sec3_time,
+            MAX(CASE WHEN sec.section_no = 4 THEN sec.sectional_time_sec END) AS sec4_time,
+            MAX(CASE WHEN sec.section_no = 5 THEN sec.sectional_time_sec END) AS sec5_time,
+            MAX(CASE WHEN sec.section_no = 6 THEN sec.sectional_time_sec END) AS sec6_time,
+            
+            -- 🌟 末腳（最後一段）時間與位置
+            MAX(CASE WHEN sec.section_no = 1 THEN sec.position END) AS pos_sec1,
+            MAX(CASE WHEN sec.section_no = 2 THEN sec.position END) AS pos_sec2,
+            MAX(CASE WHEN sec.section_no = 3 THEN sec.position END) AS pos_sec3,
+            MAX(CASE WHEN sec.section_no = 4 THEN sec.position END) AS pos_sec4,
+            MAX(CASE WHEN sec.section_no = 5 THEN sec.position END) AS pos_sec5,
+            MAX(CASE WHEN sec.section_no = 6 THEN sec.position END) AS pos_sec6
+
+        FROM race_results res
+        INNER JOIN races r ON res.race_id = r.race_id
+        LEFT JOIN horses h ON res.horse_id = h.horse_code
+        LEFT JOIN race_sectionals sec ON res.race_id = sec.race_id AND res.horse_id = sec.horse_id
+
+        -- 🌟 必須加上 GROUP BY 確保一匹馬在該場比賽只有 1 列！
+        GROUP BY 
+            r.race_id, r.date, r.venue, r.race_no, r.race_class, r.distance, 
+            r.track_condition, r.track_texture, r.track_type, res.horse_id, 
+            res.horse_name, res.placing, res.draw, res.jockey, res.trainer, 
+            res.actual_weight, res.declared_weight, res.win_odds, res.finish_time_sec, 
+            res.margin_len, res.rating, h.import_date, h.sire
+
+        ORDER BY r.date ASC, r.race_id ASC, res.horse_id ASC""")
 
         with self.engine.connect() as conn:
-            df = pd.read_sql_query(
-                query,
-                conn,
-                params={"start_date": start_date, "end_date": end_date},
-            )
+            df = pd.read_sql_query(query, conn)
 
         return self.optimize_memory(df)
 

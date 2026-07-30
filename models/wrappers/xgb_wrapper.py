@@ -22,18 +22,20 @@ class XGBRankerWrapper(BaseModel):
         super().__init__(model_params)
 
         default_params = {
-            "objective": "rank:ndcg",
-            "n_estimators": 1500,
-            "learning_rate": 0.01,
-            "max_depth": 4,
-            "subsample": 0.6,
-            "colsample_bytree": 0.6,
-            "reg_alpha": 1,
-            "reg_lambda": 20,
-            "random_state": 42,
-            "tree_method": "hist",
-            "enable_categorical": True,
-        }
+    "objective": "rank:ndcg",
+    "max_depth": 5,
+    "learning_rate": 0.02241986575232448,
+    "n_estimators": 1100,
+    "early_stopping_rounds": 137,
+    "subsample": 0.7551375320147171,
+    "colsample_bytree": 0.5807601058725049,
+    "reg_alpha": 0.07583278924335168,
+    "reg_lambda": 20.477793985681824,
+    # 💡 建議搭配的通用硬體與重現性設定：
+    "random_state": 42,
+    "n_jobs": -1,
+    "tree_method": "hist",  # 若有 GPU 可改為 "hist" 並搭配 device="cuda"
+}
 
         if self.model_params:
             default_params.update(self.model_params)

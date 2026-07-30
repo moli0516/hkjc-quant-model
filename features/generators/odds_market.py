@@ -7,6 +7,8 @@ class OddsMarketGenerator:
 
     """生成獨贏賠率、市場隱含勝率與熱門指標特徵。"""
 
+    EXECUTION_ORDER = 100
+
     def __init__(self, key_cols: list[str] = None):
         self.key_cols = key_cols or ["race_id", "horse_id"]
 

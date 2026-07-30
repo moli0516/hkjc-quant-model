@@ -3,24 +3,12 @@ import inspect
 import os
 import pkgutil
 
-EXECUTION_ORDER = {
-    "RatingClassGenerator": 10,
-    "HorseProfileGenerator": 20,
-    "SectionalSpeedGenerator": 30,
-    "PaceStrategyGenerator": 40,
-    "HorseRollingGenerator": 50,
-    "HumanSireGenerator": 60,
-    "SynergyFitnessGenerator": 70,
-    "TrackDistanceGenerator": 80,
-    "ContextRelativeGenerator": 90,
-    "OddsMarketGenerator": 100,
-    "InjuryRestGenerator": 110,
-    # 交叉特徵 Generator 必須排在最後面！
-    "InteractionGenerator": 999,
-}
-
 
 def load_all_generators(key_cols: list[str] = None):
+    """
+    動態掃描並載入當前目錄下所有的 Generator 類別，
+    自動讀取 class 內部的 EXECUTION_ORDER 進行排序後回傳實例列表。
+    """
     key_cols = key_cols or ["race_id", "horse_id"]
     generator_instances = []
 
@@ -41,8 +29,9 @@ def load_all_generators(key_cols: list[str] = None):
             ):
                 generator_instances.append(obj(key_cols=key_cols))
 
+    # 依照各 Generator 類別內部的 EXECUTION_ORDER 屬性進行排序 (未定義者預設值為 500)
     generator_instances.sort(
-        key=lambda gen: EXECUTION_ORDER.get(gen.__class__.__name__, 500)
+        key=lambda gen: getattr(gen, "EXECUTION_ORDER", 500)
     )
 
     return generator_instances

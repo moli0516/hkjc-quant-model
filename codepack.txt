@@ -1,0 +1,2235 @@
+# Project Codebase: features
+
+## Directory Structure
+
+```
+features/
+├── generators
+│   ├── __init__.py
+│   ├── class_performance.py
+│   ├── context_relative.py
+│   ├── horse_profile.py
+│   ├── horse_rolling.py
+│   ├── human_sire.py
+│   ├── injury_rest.py
+│   ├── interaction.py
+│   ├── jockey_trainer_alpha.py
+│   ├── odds_market.py
+│   ├── pace_strategy.py
+│   ├── rating_class.py
+│   ├── sectional_speed.py
+│   ├── synergy_fitness.py
+│   └── track_distance.py
+├── tests
+│   ├── test_base_target.py
+│   ├── test_generators.py
+│   └── test_utils.py
+├── utils
+│   ├── __init__.py
+│   ├── createFolder.py
+│   ├── leak_guard.py
+│   ├── scale.py
+│   ├── smoother.py
+│   ├── time_calc.py
+│   └── track_bias.py
+├── __init__.py
+├── base_target.py
+└── feature_pipeline.py
+```
+
+---
+
+## Source Code
+
+### File: `__init__.py`
+
+```py
+
+```
+
+---
+
+### File: `base_target.py`
+
+```py
+import sqlite3
+from typing import Optional
+import numpy as np
+import pandas as pd
+from features.utils.leak_guard import LeakageGuard
+
+
+class BaseTargetBuilder:
+    """專門負責建立特徵工程的核心基底（Skeleton DataFrame）與目標變數（Targets）。
+
+    與 Schema 對齊：
+    - 主表: races (race_id, date, venue, distance, track_type, track_condition, track_texture, race_class)
+    - 賽果: race_results (race_id, horse_id, placing, draw, jockey, trainer, actual_weight, declared_weight, win_odds, finish_time_sec)
+    """
+
+    PRIMARY_KEYS = ["race_id", "horse_id"]
+    TIME_KEYS = ["race_date"]
+
+    # 保留特徵工程所需的最基本 Context 欄位
+    CONTEXT_COLS = [
+        "race_date",
+        "race_id",
+        "horse_id",
+        "horse_name",
+        "jockey",
+        "trainer",
+        "venue",
+        "race_no",
+        "race_class",
+        "distance",
+        "track_condition",
+        "track_texture",
+        "track_type",
+        "draw",
+        "actual_weight",
+        "declared_weight",
+        "win_odds",
+        "finish_time_sec",
+        "margin_len",
+        "rating",
+    ]
+
+    @classmethod
+    def build_from_dataframe(cls, df_raw: pd.DataFrame) -> pd.DataFrame:
+        """從傳入的 Raw DataFrame 建立骨架。"""
+        df = df_raw.copy()
+
+        # 1. 重命名欄位 (對齊系統標準命名)
+        if "date" in df.columns and "race_date" not in df.columns:
+            df = df.rename(columns={"date": "race_date"})
+
+        # 2. 數據清洗與名次處理
+        df = cls._sanitize_data(df)
+
+        # 3. 按時間嚴格排序 (防止 Data Leakage)
+        df = cls._sort_by_time(df)
+
+        # 4. 生成目標變數 (Targets)
+        df = cls._create_targets(df)
+
+        # 5. 保留 Context + Targets
+        target_cols = ["target_win", "target_place", "target_rank_score"]
+        keep_cols = [
+            c for c in cls.CONTEXT_COLS if c in df.columns
+        ] + target_cols
+        df_base = df[keep_cols].copy()
+
+        # 6. 資料品質檢查
+        LeakageGuard.validate_feature_dataframe(
+            df_base, required_keys=cls.PRIMARY_KEYS
+        )
+
+        return df_base
+
+    @classmethod
+    def build_from_sqlite(
+        cls, db_path: str, query: Optional[str] = None
+    ) -> pd.DataFrame:
+        """根據傳入的 DB Schema 從 SQLite 資料庫做 JOIN 並載入數據。"""
+        if query is None:
+            query = """
+                SELECT 
+                    r.date AS race_date,
+                    r.race_id,
+                    r.venue,
+                    r.race_no,
+                    r.race_class,
+                    r.distance,
+                    r.track_condition,
+                    r.track_texture,
+                    r.track_type,
+                    res.horse_id,
+                    res.horse_name,
+                    res.placing,
+                    res.draw,
+                    res.jockey,
+                    res.trainer,
+                    res.actual_weight,
+                    res.declared_weight,
+                    res.win_odds,
+                    res.finish_time_sec,
+                    res.margin_len,
+                    res.rating
+                FROM races r
+                INNER JOIN race_results res ON r.race_id = res.race_id
+            """
+        with sqlite3.connect(db_path) as conn:
+            df_raw = pd.read_sql_query(query, conn)
+
+        return cls.build_from_dataframe(df_raw)
+
+    @staticmethod
+    def _sanitize_data(df: pd.DataFrame) -> pd.DataFrame:
+        """清洗退跑、無效名次與 Null 值。"""
+        # 處理名次欄位 (placing)
+        df["placing_str"] = df["placing"].astype(str).str.upper().str.strip()
+
+        # 剔除退跑/未完成/異常標籤
+        invalid_pos_keywords = [
+            "WV",
+            "SCR",
+            "DNF",
+            "DISQ",
+            "FE",
+            "PU",
+            "UR",
+            "NAN",
+            "NONE",
+        ]
+        valid_mask = ~df["placing_str"].isin(invalid_pos_keywords) & df[
+            "placing"
+        ].notnull()
+        df = df[valid_mask].copy()
+
+        # 轉為純數值名次
+        df["craft_rank"] = pd.to_numeric(df["placing"], errors="coerce")
+        df = df[df["craft_rank"].notnull() & (df["craft_rank"] > 0)].copy()
+
+        # 確保 Primary Keys 沒有缺失
+        df = df[df["race_id"].notnull() & df["horse_id"].notnull()].copy()
+        return df
+
+    @staticmethod
+    def _sort_by_time(df: pd.DataFrame) -> pd.DataFrame:
+        """嚴格按 race_date, race_id, horse_id 時間升冪排序。"""
+        df["race_date"] = pd.to_datetime(df["race_date"])
+        df = df.sort_values(
+            by=["race_date", "race_id", "horse_id"], ascending=[True, True, True]
+        ).reset_index(drop=True)
+        return df
+
+    @staticmethod
+    def _create_targets(df: pd.DataFrame) -> pd.DataFrame:
+        """生成三個標準標籤。"""
+        # Target 1: 勝出 (1st)
+        df["target_win"] = (df["craft_rank"] == 1).astype(int)
+
+        # Target 2: 上名 (Top 3)
+        df["target_place"] = (df["craft_rank"] <= 3).astype(int)
+
+        # Target 3: 排序分數 (LTR)
+        df["target_rank_score"] = 1.0 / df["craft_rank"]
+
+        return df
+```
+
+---
+
+### File: `feature_pipeline.py`
+
+```py
+import gc
+import os
+import sqlite3
+from typing import List, Optional
+import pandas as pd
+
+from features.generators import load_all_generators
+from features.utils import LeakageGuard
+
+
+class FeaturesPipeline:
+    """HKJC Quant 量化特徵工程主管道 (動態掃描 Plugin 模式 + 零拷貝 & 零碎片化極速優化)。"""
+
+    def __init__(self, key_cols: Optional[List[str]] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+        # 🚀 自動掃描並依優先權排序載入所有 Generator
+        self.generators = load_all_generators(key_cols=self.key_cols)
+
+    def run(self, df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            raise ValueError("[FeaturesPipeline] 輸入的 DataFrame 為空！")
+
+        print(
+            f"🚀 [Pipeline] 開始執行特徵生成 (共自動載入 {len(self.generators)} 個 Generators, 輸入筆數: {len(df)})"
+        )
+
+        # -------------------------------------------------------------------------
+        # 🔒 [防洩漏靈魂步驟 1] 保留原始 Index 順序，並強制按【時間】嚴格排序
+        # -------------------------------------------------------------------------
+        original_index = df.index
+
+        if "date" in df.columns:
+            # 確保按照時間序列排序，避免 Rolling/Expanding 計算時發生未來的資料洩漏
+            working_df = df.sort_values(["date", "race_id", "horse_id"]).copy()
+        else:
+            working_df = df.copy()
+
+        # -------------------------------------------------------------------------
+        # 🛡️ [防洩漏靈魂步驟 2] 驗證時間與 Target 資料合規性
+        # -------------------------------------------------------------------------
+        if hasattr(LeakageGuard, "check_dataframe"):
+            LeakageGuard.check_dataframe(working_df)
+
+        collected_feature_dfs: List[pd.DataFrame] = []
+
+        # 💡 用於追蹤已存在的特徵欄位名稱 (包含原始 df 的欄位)，排除 key_cols 避免干擾
+        existing_cols = set(working_df.columns)
+
+        for gen in self.generators:
+            gen_name = gen.__class__.__name__
+            print(f"  ⚡ 正在執行 Generator: {gen_name}...")
+
+            # 執行 Generator 生成特徵
+            feat_df = gen.generate(working_df)
+
+            if feat_df is None or feat_df.empty:
+                print(f"  ⚠️ [Warning] {gen_name} 未產出任何特徵，跳過。")
+                continue
+
+            # ---------------------------------------------------------------------
+            # 💡 [欄位防重名與數據清理]
+            # ---------------------------------------------------------------------
+            # 1. 只挑出非 Key 欄位且尚未在 existing_cols 中出現過的「新特徵欄位」
+            new_feature_cols = [
+                col
+                for col in feat_df.columns
+                if col not in self.key_cols and col not in existing_cols
+            ]
+
+            if not new_feature_cols:
+                # 檢查是否因為缺少必要欄位而直接 returned 特徵空殼
+                gen_cols_non_key = [
+                    col for col in feat_df.columns if col not in self.key_cols
+                ]
+                if not gen_cols_non_key:
+                    print(
+                        f"  ⚠️ [Warning] {gen_name} 因缺少輸入必要欄位，未生成任何新特徵。"
+                    )
+                else:
+                    print(
+                        f"  ℹ️ {gen_name} 產出的欄位 ({gen_cols_non_key}) 皆已存在於輸入數據中，跳過。"
+                    )
+                continue
+
+            # 僅保留純新特徵欄位 (Key 欄位將在最後統一拼合)
+            clean_feat_df = feat_df[new_feature_cols].copy()
+
+            # 2. 自動將 float64 轉為 float32 以節省記憶體並防止碎片化
+            float64_cols = clean_feat_df.select_dtypes(
+                include=["float64"]
+            ).columns
+            if len(float64_cols) > 0:
+                clean_feat_df[float64_cols] = clean_feat_df[
+                    float64_cols
+                ].astype("float32")
+
+            # 3. 更新已存在的欄位集合
+            existing_cols.update(new_feature_cols)
+
+            # 4. 收集結果 DataFrame
+            collected_feature_dfs.append(clean_feat_df)
+
+            # 5. 選擇性動態將新特徵併回 working_df，供後續有依賴關係的 Generator 使用
+            # (例如 PaceStrategyGenerator 依賴 RunningPositionGenerator 的產出)
+            working_df = pd.concat([working_df, clean_feat_df], axis=1)
+
+            # 手動釋放暫存記憶體
+            gc.collect()
+
+        if not collected_feature_dfs:
+            raise RuntimeError(
+                "[FeaturesPipeline] 没有任何 Generator 成功生成特徵！"
+            )
+
+        # -------------------------------------------------------------------------
+        # 🚀 [零碎片化特徵合併、Key 欄位保留與 Index 恢復]
+        # -------------------------------------------------------------------------
+        print("📦 [Pipeline] 正在高效併合所有特徵矩陣 (含 Key 欄位)...")
+
+        # 1. 提取 Key 欄位 (確保包含 self.key_cols，例如 race_id, horse_id)
+        present_keys = [
+            col for col in self.key_cols if col in working_df.columns
+        ]
+        keys_df = working_df[present_keys].copy()
+
+        # 2. 一次性併合 Keys 與所有生成出的特徵 DataFrame
+        generated_features_df = pd.concat(collected_feature_dfs, axis=1)
+        final_features_df = pd.concat([keys_df, generated_features_df], axis=1)
+
+        # 🔒 [防洩漏與對齊靈魂步驟 3] 恢復為傳入時的原始 Index 順序
+        final_features_df = final_features_df.reindex(original_index)
+
+        print(
+            f"✅ [Pipeline] 特徵工程完成！總共產出 {final_features_df.shape[1]} 個欄位 (含 Keys: {present_keys})，筆數: {len(final_features_df)}"
+        )
+
+        return final_features_df
+```
+
+---
+
+### File: `generators\__init__.py`
+
+```py
+import importlib
+import inspect
+import os
+import pkgutil
+
+EXECUTION_ORDER = {
+    "RatingClassGenerator": 10,
+    "ClassPerformanceGenerator": 15,
+    "HorseProfileGenerator": 20,
+    "SectionalSpeedGenerator": 30,
+    "PaceStrategyGenerator": 40,
+    "HorseRollingGenerator": 50,
+    "HumanSireGenerator": 60,
+    "JockeyTrainerAlphaGenerator": 65,
+    "SynergyFitnessGenerator": 70,
+    "TrackDistanceGenerator": 80,
+    "ContextRelativeGenerator": 90,
+    "OddsMarketGenerator": 100,
+    "InjuryRestGenerator": 110,
+    # 交叉特徵 Generator 必須排在最後面！
+    "InteractionGenerator": 999,
+}
+
+
+def load_all_generators(key_cols: list[str] = None):
+    key_cols = key_cols or ["race_id", "horse_id"]
+    generator_instances = []
+
+    pkg_dir = os.path.dirname(__file__)
+    pkg_name = __name__
+
+    for _, module_name, is_pkg in pkgutil.iter_modules([pkg_dir]):
+        if module_name.startswith("_") or is_pkg:
+            continue
+
+        full_module_name = f"{pkg_name}.{module_name}"
+        module = importlib.import_module(full_module_name)
+
+        for name, obj in inspect.getmembers(module, inspect.isclass):
+            if (
+                obj.__module__ == full_module_name
+                and name.endswith("Generator")
+            ):
+                generator_instances.append(obj(key_cols=key_cols))
+
+    generator_instances.sort(
+        key=lambda gen: EXECUTION_ORDER.get(gen.__class__.__name__, 500)
+    )
+
+    return generator_instances
+```
+
+---
+
+### File: `generators\class_performance.py`
+
+```py
+import numpy as np
+import pandas as pd
+import re
+from features.utils import BayesianSmoother, LeakageGuard
+
+
+class ClassPerformanceGenerator:
+    """馬匹班次表現與升降班適應力特徵生成器 (僅限 Class 1-5)"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    @staticmethod
+    def _parse_class_num(race_class_series: pd.Series) -> pd.Series:
+        """只解析 Class 1 到 5，其他班次 (Group/Griffin/特殊賽事) 一律回傳 np.nan"""
+
+        def parse_val(val):
+            if pd.isna(val):
+                return np.nan
+            s = str(val).upper().strip()
+
+            # 抓取班次數字 (例如: "CLASS 3" -> 3)
+            match = re.search(r"(\d+)", s)
+            if match:
+                class_num = float(match.group(1))
+                # 嚴格限制在 1 至 5 班之間
+                if 1.0 <= class_num <= 5.0:
+                    return class_num
+
+            # 非 1-5 班賽事 (如 Group 1, Griffin 等) 返回 NaN
+            return np.nan
+
+        return race_class_series.apply(parse_val)
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        if "race_class" not in df.columns:
+            LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+            return features
+
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+        work_df["class_num"] = self._parse_class_num(work_df["race_class"])
+        work_df["is_win"] = (work_df["placing"] == 1).astype("float32")
+        work_df["is_top3"] = (work_df["placing"] <= 3).astype("float32")
+
+        # 計算同班歷史勝率與上名率 (非 1-5 班的紀錄會自動忽略)
+        class_win_rate = BayesianSmoother.calc_global_smooth_rate(
+            work_df,
+            group_cols=["horse_id", "class_num"],
+            target_col="is_win",
+            prior_alpha=2.0,
+            baseline_rate=0.08,
+        )
+        features["horse_class_win_rate"] = class_win_rate.reindex(
+            df.index
+        ).astype("float32")
+
+        class_top3_rate = BayesianSmoother.calc_global_smooth_rate(
+            work_df,
+            group_cols=["horse_id", "class_num"],
+            target_col="is_top3",
+            prior_alpha=2.0,
+            baseline_rate=0.24,
+        )
+        features["horse_class_top3_rate"] = class_top3_rate.reindex(
+            df.index
+        ).astype("float32")
+
+        # 升降班動態標籤計算
+        prev_class = work_df.groupby("horse_id")["class_num"].shift(1)
+        work_df["class_diff"] = work_df["class_num"] - prev_class
+
+        # 只有兩場賽事都在 1-5 班內時，才會計算升降班
+        work_df["is_class_up"] = (work_df["class_diff"] < 0).astype("float32")
+        work_df["is_class_down"] = (work_df["class_diff"] > 0).astype("float32")
+
+        features["is_class_up"] = (
+            work_df["is_class_up"].reindex(df.index).fillna(0.0).astype("float32")
+        )
+        features["is_class_down"] = (
+            work_df["is_class_down"]
+            .reindex(df.index)
+            .fillna(0.0)
+            .astype("float32")
+        )
+
+        # 歷史升降班次數統計
+        shifted_up = work_df.groupby("horse_id")["is_class_up"].shift(1)
+        shifted_down = work_df.groupby("horse_id")["is_class_down"].shift(1)
+
+        cum_class_up_count = (
+            shifted_up.groupby(work_df["horse_id"]).cumsum().fillna(0.0)
+        )
+        cum_class_down_count = (
+            shifted_down.groupby(work_df["horse_id"]).cumsum().fillna(0.0)
+        )
+
+        features["horse_hist_class_up_count"] = (
+            cum_class_up_count.reindex(df.index).astype("float32")
+        )
+        features["horse_hist_class_down_count"] = (
+            cum_class_down_count.reindex(df.index).astype("float32")
+        )
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\context_relative.py`
+
+```py
+import pandas as pd
+from features.utils import RaceScaler, LeakageGuard
+
+
+class ContextRelativeGenerator:
+
+    """生成同場賽事內部相對優勢特徵 (Race-Level Relative Features)。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        if "win_odds" in df.columns:
+            features["win_odds_race_z"] = RaceScaler.race_z_score(
+                df, race_col="race_id", value_col="win_odds"
+            ).astype("float32")
+            features["win_odds_race_rank"] = RaceScaler.race_rank(
+                df, race_col="race_id", value_col="win_odds", ascending=True
+            ).astype("float32")
+
+        if "actual_weight" in df.columns:
+            features["weight_diff_from_race_mean"] = (
+                RaceScaler.race_diff_from_mean(
+                    df, race_col="race_id", value_col="actual_weight"
+                ).astype("float32")
+            )
+            features["weight_race_z"] = RaceScaler.race_z_score(
+                df, race_col="race_id", value_col="actual_weight"
+            ).astype("float32")
+
+        if "horse_rolling_win_rate_5" in df.columns:
+            features["horse_win_rate_race_z"] = RaceScaler.race_z_score(
+                df, race_col="race_id", value_col="horse_rolling_win_rate_5"
+            ).astype("float32")
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\horse_profile.py`
+
+```py
+import numpy as np
+import pandas as pd
+from features.utils import LeakageGuard
+
+
+class HorseProfileGenerator:
+
+    """生成馬匹靜態與背景屬性特徵 (Data Source: horses)。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        if "date" in df.columns and "birth_date" in df.columns:
+            race_dt = pd.to_datetime(df["date"])
+            birth_dt = pd.to_datetime(df["birth_date"])
+            features["horse_age"] = (
+                (race_dt - birth_dt).dt.days / 365.25
+            ).astype("float32")
+        elif "age" in df.columns:
+            features["horse_age"] = df["age"].astype("float32")
+        else:
+            features["horse_age"] = np.nan
+
+        if "brand_no" in df.columns:
+            features["brand_prefix"] = (
+                df["brand_no"].astype(str).str[0].str.upper()
+            )
+        else:
+            features["brand_prefix"] = "UNKNOWN"
+
+        categorical_cols = ["origin", "import_type", "sex", "color"]
+        for col in categorical_cols:
+            if col in df.columns:
+                features[f"horse_{col}"] = df[col].fillna("UNKNOWN").astype(str)
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\horse_rolling.py`
+
+```py
+import pandas as pd
+from features.utils import BayesianSmoother, LeakageGuard
+
+
+class HorseRollingGenerator:
+
+    """計算馬匹歷史賽事紀錄之滾動 (Rolling) 統計特徵。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        # 安全防護：排序並計算
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+        work_df["is_win"] = (work_df["placing"] == 1).astype("float32")
+        work_df["is_top3"] = (work_df["placing"] <= 3).astype("float32")
+
+        windows = [3, 5, 10]
+        for w in windows:
+            features[f"horse_rolling_pos_mean_{w}"] = (
+                BayesianSmoother.calc_rolling_stat(
+                    work_df,
+                    group_cols="horse_id",
+                    value_col="placing",
+                    window_size=w,
+                    stat_type="mean",
+                )
+                .reindex(df.index)
+                .astype("float32")
+            )
+
+            features[f"horse_rolling_pos_std_{w}"] = (
+                BayesianSmoother.calc_rolling_stat(
+                    work_df,
+                    group_cols="horse_id",
+                    value_col="placing",
+                    window_size=w,
+                    stat_type="std",
+                )
+                .reindex(df.index)
+                .astype("float32")
+            )
+
+            features[f"horse_rolling_win_rate_{w}"] = (
+                BayesianSmoother.calc_rolling_smooth_rate(
+                    work_df,
+                    group_cols="horse_id",
+                    target_col="is_win",
+                    window_size=w,
+                    prior_alpha=3.0,
+                    baseline_rate=0.08,
+                )
+                .reindex(df.index)
+                .astype("float32")
+            )
+
+            features[f"horse_rolling_top3_rate_{w}"] = (
+                BayesianSmoother.calc_rolling_smooth_rate(
+                    work_df,
+                    group_cols="horse_id",
+                    target_col="is_top3",
+                    window_size=w,
+                    prior_alpha=3.0,
+                    baseline_rate=0.24,
+                )
+                .reindex(df.index)
+                .astype("float32")
+            )
+
+            if "actual_weight" in work_df.columns:
+                features[f"horse_rolling_weight_mean_{w}"] = (
+                    BayesianSmoother.calc_rolling_stat(
+                        work_df,
+                        group_cols="horse_id",
+                        value_col="actual_weight",
+                        window_size=w,
+                        stat_type="mean",
+                    )
+                    .reindex(df.index)
+                    .astype("float32")
+                )
+
+        if "date" in work_df.columns:
+            work_df["race_dt"] = pd.to_datetime(work_df["date"])
+            prev_dt = work_df.groupby("horse_id")["race_dt"].shift(1)
+            days = (work_df["race_dt"] - prev_dt).dt.days.fillna(999)
+            features["days_since_last_race"] = (
+                days.reindex(df.index).astype("float32")
+            )
+
+        if "horse_weight" in work_df.columns:
+            prev_horse_w = work_df.groupby("horse_id")["horse_weight"].shift(1)
+            w_change = work_df["horse_weight"] - prev_horse_w
+            features["horse_weight_change"] = (
+                w_change.reindex(df.index).fillna(0.0).astype("float32")
+            )
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\human_sire.py`
+
+```py
+import pandas as pd
+
+
+class HumanSireGenerator:
+    """血統與人馬組合特徵生成器"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id", "date"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = pd.DataFrame(index=df.index)
+        work_df = df.copy()
+        work_df["is_win"] = (work_df["placing"] == 1).astype("float32")
+
+        # 父系/種馬 (Sire) 特徵防洩漏：按日期計算前日為止的歷史統計
+        if "sire" in work_df.columns:
+            # 按日期與 Sire 聚合每日的總出賽數與勝場數
+            daily_sire = (
+                work_df.groupby(["date", "sire"])["is_win"]
+                .agg(daily_wins="sum", daily_count="count")
+                .reset_index()
+                .sort_values("date")
+            )
+
+            # 對每個 Sire 計算歷史累積 (shift(1) 扣除當日所有賽事)
+            daily_sire["hist_wins"] = daily_sire.groupby("sire")[
+                "daily_wins"
+            ].shift(1)
+            daily_sire["hist_count"] = daily_sire.groupby("sire")[
+                "daily_count"
+            ].shift(1)
+
+            daily_sire["cum_wins"] = (
+                daily_sire.groupby("sire")["hist_wins"]
+                .expanding()
+                .sum()
+                .reset_index(level=0, drop=True)
+                .fillna(0.0)
+            )
+            daily_sire["cum_count"] = (
+                daily_sire.groupby("sire")["hist_count"]
+                .expanding()
+                .sum()
+                .reset_index(level=0, drop=True)
+                .fillna(0.0)
+            )
+
+            # 貝氏平滑
+            prior_alpha, baseline_rate = 15.0, 0.08
+            prior_beta = prior_alpha * (1.0 - baseline_rate) / baseline_rate
+            daily_sire["sire_global_win_rate"] = (
+                daily_sire["cum_wins"] + prior_alpha
+            ) / (daily_sire["cum_count"] + prior_alpha + prior_beta)
+
+            # Merge 回原數據
+            merged = pd.merge(
+                work_df[["date", "sire"]],
+                daily_sire[["date", "sire", "sire_global_win_rate"]],
+                on=["date", "sire"],
+                how="left",
+            )
+            features["sire_global_win_rate"] = merged[
+                "sire_global_win_rate"
+            ].values
+
+        return features.fillna(0.0).astype("float32")
+```
+
+---
+
+### File: `generators\injury_rest.py`
+
+```py
+import pandas as pd
+from features.utils import LeakageGuard
+
+
+class InjuryRestGenerator:
+
+    """生成參賽節奏、久休復出與抵港參賽間隔特徵。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+
+        if "date" in work_df.columns:
+            work_df["race_dt"] = pd.to_datetime(work_df["date"])
+            prev_dt = work_df.groupby("horse_id")["race_dt"].shift(1)
+
+            days_diff = (work_df["race_dt"] - prev_dt).dt.days
+            features["days_since_last_race"] = (
+                days_diff.reindex(df.index).fillna(999.0).astype("float32")
+            )
+
+            features["is_layoff_60d"] = (
+                features["days_since_last_race"] >= 60.0
+            ).astype("float32")
+            features["is_layoff_90d"] = (
+                features["days_since_last_race"] >= 90.0
+            ).astype("float32")
+
+        if "import_date" in df.columns and "date" in df.columns:
+            import_dt = pd.to_datetime(df["import_date"], errors="coerce")
+            race_dt = pd.to_datetime(df["date"])
+            features["days_since_import"] = (
+                (race_dt - import_dt).dt.days.fillna(999.0).astype("float32")
+            )
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\interaction.py`
+
+```py
+import numpy as np
+import pandas as pd
+from features.utils import LeakageGuard
+
+
+class InteractionGenerator:
+
+    """生成交叉權重與高級交互特徵。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        # 1. 負重比率
+        hw_col = next(
+            (
+                c
+                for c in ["horse_weight", "declared_weight", "rank_weight"]
+                if c in df.columns
+            ),
+            None,
+        )
+        if "actual_weight" in df.columns and hw_col:
+            valid_hw = df[hw_col].replace(0, np.nan)
+            features["weight_to_horse_body_ratio"] = (
+                df["actual_weight"] / valid_hw
+            ).astype("float32")
+
+        # 2. 人馬勝率乘積
+        h_win_col = next(
+            (
+                c
+                for c in [
+                    "horse_rolling_win_rate_5",
+                    "h_smoothed_rolling_5_win_rate",
+                ]
+                if c in df.columns
+            ),
+            None,
+        )
+        j_win_col = next(
+            (
+                c
+                for c in [
+                    "jockey_rolling_win_rate_50",
+                    "j_smoothed_rolling_30_win_rate",
+                ]
+                if c in df.columns
+            ),
+            None,
+        )
+
+        if h_win_col and j_win_col:
+            features["horse_jockey_win_rate_interaction"] = (
+                df[h_win_col] * df[j_win_col]
+            ).astype("float32")
+
+        # 3. 賠率落差與隱含勝率
+        if "win_odds" in df.columns:
+            implied_prob = 1.0 / df["win_odds"].replace(0, np.nan)
+            features["win_odds_inv"] = implied_prob.astype("float32")
+
+            if h_win_col:
+                features["odds_vs_history_win_rate_gap"] = (
+                    implied_prob - df[h_win_col]
+                ).astype("float32")
+
+        # 4. 檔位與速度 Z-Score 交互
+        if "draw" in df.columns and "h_mean_speed_z_15" in df.columns:
+            features["draw_speed_interaction"] = (
+                df["draw"] * df["h_mean_speed_z_15"]
+            ).astype("float32")
+
+        # 5. 評分優勢 / 負重變化與體重交互
+        rating_col = (
+            "rating_vs_race_avg"
+            if "rating_vs_race_avg" in df.columns
+            else "rating"
+        )
+        if rating_col in df.columns and hw_col:
+            features["rating_x_rank_weight"] = (
+                df[rating_col] * df[hw_col]
+            ).astype("float32")
+
+        if "weight_delta" in df.columns and hw_col:
+            features["delta_x_rank"] = (df["weight_delta"] * df[hw_col]).astype(
+                "float32"
+            )
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\jockey_trainer_alpha.py`
+
+```py
+import numpy as np
+import pandas as pd
+import re
+from features.utils import BayesianSmoother, LeakageGuard
+
+
+class JockeyTrainerAlphaGenerator:
+    """騎練動態 Alpha 特徵生成器 (Jockey & Trainer Dynamics Alpha Generator)
+
+    主要計算：
+    1. 騎練組合歷史勝率與上名率 Alpha (Jockey-Trainer Synergy)
+    2. 騎師更換訊號 (Jockey Switch / Upgrade / Downgrade)
+    3. 練馬師近期換人勝率提升度
+    * 僅針對 Class 1-5 賽事產出有效班次 Alpha，非 1-5 班賽事標記為 NaN。
+    """
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    @staticmethod
+    def _is_class_1_to_5(race_class_series: pd.Series) -> pd.Series:
+        """檢查賽事是否屬於 Class 1 至 Class 5"""
+
+        def check_valid(val):
+            if pd.isna(val):
+                return False
+            s = str(val).upper().strip()
+            # 排除級際賽
+            if any(kw in s for kw in ["G1", "G2", "G3", "GROUP", "HKG"]):
+                return False
+            match = re.search(r"(\d+)", s)
+            if match:
+                c = float(match.group(1))
+                return 1.0 <= c <= 5.0
+            return False
+
+        return race_class_series.apply(check_valid)
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        required_cols = ["jockey", "trainer", "date", "placing"]
+        if not all(col in df.columns for col in required_cols):
+            LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+            return features
+
+        # 1. 按馬匹與時間排序，建立連貫的時間序列工作表
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+
+        # 標記是否為目標 1-5 班賽事
+        if "race_class" in work_df.columns:
+            work_df["is_target_class"] = self._is_class_1_to_5(
+                work_df["race_class"]
+            )
+        else:
+            work_df["is_target_class"] = True
+
+        work_df["is_win"] = (work_df["placing"] == 1).astype("float32")
+        work_df["is_top3"] = (work_df["placing"] <= 3).astype("float32")
+
+        # 組合 Key: 騎師 + 練馬師
+        work_df["jt_combo"] = (
+            work_df["jockey"].astype(str)
+            + "_"
+            + work_df["trainer"].astype(str)
+        )
+
+        # 2. 騎練組合歷史勝率與上名率 (Bayesian Smoothed)
+        jt_win_rate = BayesianSmoother.calc_global_smooth_rate(
+            work_df,
+            group_cols=["jt_combo"],
+            target_col="is_win",
+            prior_alpha=3.0,  # 騎練組合樣本較稀疏，給予較高先驗權重
+            baseline_rate=0.08,
+        )
+
+        jt_top3_rate = BayesianSmoother.calc_global_smooth_rate(
+            work_df,
+            group_cols=["jt_combo"],
+            target_col="is_top3",
+            prior_alpha=3.0,
+            baseline_rate=0.24,
+        )
+
+        # 3. 騎師個體基準歷史勝率 (用以計算 組合 Alpha = 組合勝率 - 騎師個人勝率)
+        jockey_win_rate = BayesianSmoother.calc_global_smooth_rate(
+            work_df,
+            group_cols=["jockey"],
+            target_col="is_win",
+            prior_alpha=5.0,
+            baseline_rate=0.08,
+        )
+
+        # 計算騎練合作超額收益 (JT Combination Synergy Alpha)
+        jt_win_alpha = jt_win_rate - jockey_win_rate
+
+        # 4. 騎師更換動態 (Jockey Switch Dynamics)
+        # 取得馬匹上一場的騎師
+        prev_jockey = work_df.groupby("horse_id")["jockey"].shift(1)
+        work_df["is_jockey_switched"] = (
+            (work_df["jockey"] != prev_jockey) & (prev_jockey.notna())
+        ).astype("float32")
+
+        # 計算新騎師 vs 舊騎師的歷史勝率差 (Jockey Upgrade/Downgrade Signal)
+        # 注意：計算舊騎師勝率時需對齊 index
+        prev_jockey_win_rate = (
+            work_df.groupby("horse_id")["jockey"]
+            .shift(1)
+            .map(jockey_win_rate)
+        )
+        work_df["jockey_upgrade_alpha"] = np.where(
+            work_df["is_jockey_switched"] == 1.0,
+            jockey_win_rate - prev_jockey_win_rate,
+            0.0,
+        )
+
+        # 5. 將結果與原始對齊，並針對非 1-5 班賽事遮罩為 NaN (使用 alpha_ 前綴避免名稱衝突)
+        target_mask = work_df["is_target_class"]
+
+        features["alpha_jt_combo_win_rate"] = np.where(
+            target_mask, jt_win_rate, np.nan
+        )
+        features["alpha_jt_combo_top3_rate"] = np.where(
+            target_mask, jt_top3_rate, np.nan
+        )
+        features["alpha_jt_synergy_alpha"] = np.where(
+            target_mask, jt_win_alpha, np.nan
+        )
+        features["alpha_is_jockey_switched"] = np.where(
+            target_mask, work_df["is_jockey_switched"], np.nan
+        )
+        features["alpha_jockey_upgrade_alpha"] = np.where(
+            target_mask, work_df["jockey_upgrade_alpha"], np.nan
+        )
+
+        # 將索引還原至傳入時的 df 順序
+        features = features.reindex(df.index)
+
+        # 轉為 float32 節省記憶體
+        for col in features.columns:
+            if col not in self.key_cols:
+                features[col] = features[col].astype("float32")
+
+        # 6. Leakage 安全驗證
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+        return features
+```
+
+---
+
+### File: `generators\odds_market.py`
+
+```py
+import numpy as np
+import pandas as pd
+from features.utils import LeakageGuard
+
+
+class OddsMarketGenerator:
+
+    """生成獨贏賠率、市場隱含勝率與熱門指標特徵。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        if "win_odds" in df.columns:
+            valid_odds = df["win_odds"].replace(0, np.nan)
+
+            features["odds_implied_prob"] = (1.0 / valid_odds).astype(
+                "float32"
+            )
+            features["is_market_favorite"] = (df["win_odds"] <= 3.0).astype(
+                "float32"
+            )
+
+            odds_mean = df.groupby("race_id")["win_odds"].transform("mean")
+            odds_std = df.groupby("race_id")["win_odds"].transform("std")
+            features["odds_race_zscore"] = (
+                (df["win_odds"] - odds_mean) / (odds_std + 1e-6)
+            ).astype("float32")
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\pace_strategy.py`
+
+```py
+import pandas as pd
+
+
+class PaceStrategyGenerator:
+    """跑法與賽事步速競爭特徵生成器 (精準對齊 DB Schema 版)"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id", "date"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = pd.DataFrame(index=df.index)
+
+        # 1. 精準對齊 DBManager 產出的 pos_sec1 欄位 (首段走位)
+        pos_series = None
+
+        if "pos_sec1" in df.columns:
+            pos_series = pd.to_numeric(df["pos_sec1"], errors="coerce")
+        elif "running_position_avg" in df.columns:
+            pos_series = pd.to_numeric(df["running_position_avg"], errors="coerce")
+        elif "position_1" in df.columns:
+            pos_series = pd.to_numeric(df["position_1"], errors="coerce")
+
+        # 2. 如果真的沒有走位數據，填 0.0
+        if pos_series is None:
+            print("  [PaceStrategyGenerator] ℹ️ 未找到 pos_sec1 走位欄位，填補預設值 0.0")
+            features["is_front_runner"] = 0.0
+            features["race_front_runner_count"] = 0.0
+            return features.astype("float32")
+
+        # 3. 計算是否為領放馬 (首段走位 <= 3.0 視為領放/前追馬)
+        is_front = (pos_series.fillna(99.0) <= 3.0).astype("float32")
+        features["is_front_runner"] = is_front
+
+        # 4. 計算同場領放馬數量 (對齊 feature_matrix 表格中的欄位名稱: race_front_runner_count)
+        # 註：為保持與 DB Schema 欄位名稱 100% 一致，欄位命名為 race_front_runner_count
+        df_temp = pd.DataFrame(
+            {"race_id": df["race_id"], "is_front": is_front}, index=df.index
+        )
+        features["race_front_runner_count"] = (
+            df_temp.groupby("race_id")["is_front"]
+            .transform("sum")
+            .astype("float32")
+        )
+
+        return features.fillna(0.0).astype("float32")
+```
+
+---
+
+### File: `generators\rating_class.py`
+
+```py
+import pandas as pd
+from features.utils import LeakageGuard
+
+
+class RatingClassGenerator:
+
+    """生成馬匹評分變動與班次升降 (Class Change) 特徵。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+
+        if "rating" in work_df.columns:
+            prev_rating = work_df.groupby("horse_id")["rating"].shift(1)
+            rating_change = work_df["rating"] - prev_rating
+            features["rating_change"] = (
+                rating_change.reindex(df.index).fillna(0.0).astype("float32")
+            )
+
+        if "race_class" in work_df.columns:
+            class_num = (
+                work_df["race_class"]
+                .astype(str)
+                .str.extract(r"(\d+)", expand=False)
+                .astype(float)
+            )
+
+            work_df["_class_num"] = class_num
+            prev_class = work_df.groupby("horse_id")["_class_num"].shift(1)
+
+            class_change = work_df["_class_num"] - prev_class
+            features["class_change"] = (
+                class_change.reindex(df.index).fillna(0.0).astype("float32")
+            )
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\sectional_speed.py`
+
+```py
+import numpy as np
+import pandas as pd
+from features.utils import BayesianSmoother, LeakageGuard, SpeedTimeCalculator
+
+
+class SectionalSpeedGenerator:
+    """生成分段時間、末腳爆發力與走位卡位能力特徵 (適用於 SQL 轉置欄位結構)。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+
+        # 1. 計算全場平均速度 (m/s)
+        if "distance" in df.columns and "finish_time_sec" in df.columns:
+            features["speed_mps_overall"] = (
+                SpeedTimeCalculator.calc_speed_mps(
+                    df["distance"], df["finish_time_sec"]
+                ).astype("float32")
+            )
+
+        # 2. 動態提取「最後一段分段時間 (sectional_time_last)」
+        # 依照 SQL 輸出的 sec1_time ~ sec6_time 欄位進行橫向 ffill，自動取得最後一個非空分段
+        sec_cols = [
+            c for c in ["sec1_time", "sec2_time", "sec3_time", "sec4_time", "sec5_time", "sec6_time"]
+            if c in df.columns
+        ]
+        
+        if sec_cols:
+            # ffill(axis=1) 後取最後一欄，即為該場賽事的末腳時間
+            features["sectional_time_last"] = df[sec_cols].ffill(axis=1).iloc[:, -1]
+
+        # 3. 計算末腳衝刺速度 (m/s) (香港賽馬最後一段固定為 400 米)
+        if "sectional_time_last" in features.columns:
+            features["speed_mps_last_sectional"] = (
+                SpeedTimeCalculator.calc_speed_mps(
+                    pd.Series(400.0, index=df.index), features["sectional_time_last"]
+                ).astype("float32")
+            )
+
+        # 4. 計算走位變化/衝刺追趕能力 (Position Gain)
+        # 算式：第一彎位置 (pos_sec1) - 轉直路前最後位置
+        # 正數代表名次提升（後追成功），負數代表名次退後（力弱）
+        pos_cols = [
+            c for c in ["pos_sec1", "pos_sec2", "pos_sec3", "pos_sec4", "pos_sec5", "pos_sec6"]
+            if c in df.columns
+        ]
+        
+        if len(pos_cols) >= 2:
+            # 取得有記錄的第一個位置與最後一個位置
+            first_pos = df[pos_cols].bfill(axis=1).iloc[:, 0]
+            last_pos = df[pos_cols].ffill(axis=1).iloc[:, -1]
+            features["position_gain_first_to_last"] = (first_pos - last_pos).astype("float32")
+
+        # 5. 計算馬匹歷史近 3 場末腳平均速度 (Rolling Mean, 含 Shift(1) 防洩漏)
+        if "speed_mps_last_sectional" in features.columns:
+            # 建立時間與馬匹排序的工作 DataFrame
+            work_df = df.sort_values(["horse_id", "date"]).copy()
+            work_df["speed_mps_last_sectional"] = features.loc[
+                work_df.index, "speed_mps_last_sectional"
+            ]
+
+            # 呼叫 BayesianSmoother 的 rolling 統計
+            rolling_speed = BayesianSmoother.calc_rolling_stat(
+                work_df,
+                group_cols="horse_id",
+                value_col="speed_mps_last_sectional",
+                window_size=3,
+                stat_type="mean",
+            )
+            
+            # 精準還原為原始 df 的 Index 順序
+            features["horse_rolling_last_sec_speed_mean_3"] = (
+                rolling_speed.loc[df.index].astype("float32")
+            )
+
+        # 6. 特徵防洩漏與欄位驗證
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\synergy_fitness.py`
+
+```py
+import pandas as pd
+from features.utils import BayesianSmoother, LeakageGuard
+
+
+class SynergyFitnessGenerator:
+
+    """生成人馬默契與更換騎師特徵 (全面向量化優化)。"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = df[self.key_cols].copy()
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+
+        if "jockey" in work_df.columns:
+            # 1. 是否更換騎師
+            prev_jockey = work_df.groupby("horse_id")["jockey"].shift(1)
+            is_changed = (work_df["jockey"] != prev_jockey).astype("float32")
+            features["is_jockey_changed"] = (
+                is_changed.reindex(df.index).fillna(0.0).astype("float32")
+            )
+
+            # 2. 人馬組合
+            work_df["horse_jockey_pair"] = (
+                work_df["horse_id"].astype(str)
+                + "_"
+                + work_df["jockey"].astype(str)
+            )
+            work_df["is_win"] = (work_df["placing"] == 1).astype("float32")
+
+            # 🚀【核心效能優化】：用 cumcount() 替代 transform(lambda)
+            # 歷史合作次數 (不包含當場，所以從 0 開始，剛好符合 shift 效果)
+            pair_counts = work_df.groupby("horse_jockey_pair").cumcount()
+            features["pair_ride_count"] = (
+                pair_counts.reindex(df.index).astype("float32")
+            )
+
+            # 3. 貝氏平滑人馬勝率
+            pair_win_rate = BayesianSmoother.calc_global_smooth_rate(
+                work_df,
+                group_cols="horse_jockey_pair",
+                target_col="is_win",
+                prior_alpha=2.0,
+                baseline_rate=0.08,
+            )
+            features["pair_win_rate"] = (
+                pair_win_rate.reindex(df.index).astype("float32")
+            )
+
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+        return features
+```
+
+---
+
+### File: `generators\track_distance.py`
+
+```py
+import pandas as pd
+from features.utils.smoother import BayesianSmoother
+
+
+class TrackDistanceGenerator:
+    """路程與場地歷史特徵生成器"""
+
+    def __init__(self, key_cols: list[str] = None):
+        self.key_cols = key_cols or ["race_id", "horse_id", "date"]
+
+    def generate(self, df: pd.DataFrame) -> pd.DataFrame:
+        features = pd.DataFrame(index=df.index)
+
+        # 確保排序並保留原 Index 對齊
+        work_df = df.sort_values(["horse_id", "date"]).copy()
+        work_df["is_win"] = (work_df["placing"] == 1).astype("float32")
+
+        # 1. 跑道/路程 組合勝率 (對齊原 Index)
+        dist_smooth = BayesianSmoother.calc_global_smooth_rate(
+            work_df,
+            group_cols=["horse_id", "distance"],
+            target_col="is_win",
+            prior_alpha=2.0,
+            baseline_rate=0.08,
+        )
+        features["horse_dist_win_rate"] = dist_smooth.reindex(df.index)
+
+        # 2. 場地 (Track/Course) 組合勝率
+        if "track" in work_df.columns:
+            track_smooth = BayesianSmoother.calc_global_smooth_rate(
+                work_df,
+                group_cols=["horse_id", "track"],
+                target_col="is_win",
+                prior_alpha=2.0,
+                baseline_rate=0.08,
+            )
+            features["horse_track_win_rate"] = track_smooth.reindex(df.index)
+
+        return features.fillna(0.0).astype("float32")
+```
+
+---
+
+### File: `tests\test_base_target.py`
+
+```py
+import unittest
+import pandas as pd
+from features.base_target import BaseTargetBuilder
+
+
+class TestBaseTargetBuilder(unittest.TestCase):
+
+    def setUp(self):
+        """模擬從 SQL JOIN 產出的 Raw DataFrame"""
+        self.raw_data = pd.DataFrame(
+            {
+                "date": ["2026-02-01", "2026-01-01", "2026-01-01"],
+                "race_id": ["R201", "R101", "R101"],
+                "venue": ["ST", "HV", "HV"],
+                "race_no": [1, 1, 1],
+                "race_class": ["Class 3", "Class 4", "Class 4"],
+                "distance": [1200.0, 1650.0, 1650.0],
+                "track_condition": ["GOOD", "GOOD", "GOOD"],
+                "track_texture": ["TURF", "TURF", "TURF"],
+                "track_type": ["A", "B", "B"],
+                "horse_id": ["H001", "H001", "H002"],
+                "horse_name": ["馬王", "馬王", "飛輪"],
+                "placing": [1, 2, "WV"],  # H002 為退跑馬匹
+                "draw": [1, 3, 5],
+                "jockey": ["潘頓", "潘頓", "田泰安"],
+                "trainer": ["告東尼", "告東尼", "方嘉柏"],
+                "actual_weight": [133.0, 128.0, 120.0],
+                "declared_weight": [1100.0, 1090.0, 1050.0],
+                "win_odds": [2.5, 4.0, 15.0],
+                "finish_time_sec": [69.5, 99.8, None],
+                "margin_len": [0.0, 1.25, None],
+                "rating": [80.0, 78.0, 60.0],
+            }
+        )
+
+    def test_base_target_building(self):
+        df_base = BaseTargetBuilder.build_from_dataframe(self.raw_data)
+
+        # 1. 驗證 WV 退跑馬匹被過濾 (應剩 2 筆)
+        self.assertEqual(len(df_base), 2)
+
+        # 2. 驗證時間排序 (2026-01-01 排前面)
+        self.assertEqual(
+            df_base.iloc[0]["race_date"], pd.Timestamp("2026-01-01")
+        )
+
+        # 3. 驗證 Target 計算
+        self.assertEqual(df_base.iloc[0]["target_win"], 0)
+        self.assertEqual(df_base.iloc[0]["target_place"], 1)
+        self.assertEqual(df_base.iloc[0]["target_rank_score"], 0.5)
+
+        self.assertEqual(df_base.iloc[1]["target_win"], 1)
+        self.assertEqual(df_base.iloc[1]["target_place"], 1)
+        self.assertEqual(df_base.iloc[1]["target_rank_score"], 1.0)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+```
+
+---
+
+### File: `tests\test_generators.py`
+
+```py
+import unittest
+import numpy as np
+import pandas as pd
+
+# 匯入 12 個 generators 與 LeakageGuard 工具
+from features.generators import (
+    ContextRelativeGenerator,
+    HorseProfileGenerator,
+    HorseRollingGenerator,
+    HumanSireGenerator,
+    InjuryRestGenerator,
+    InteractionGenerator,
+    OddsMarketGenerator,
+    PaceStrategyGenerator,
+    RatingClassGenerator,
+    SectionalSpeedGenerator,
+    SynergyFitnessGenerator,
+    TrackDistanceGenerator,
+)
+from features.utils import LeakageGuard
+
+
+class TestGeneratorsSuite(unittest.TestCase):
+
+    def setUp(self):
+        """建立符合數據庫 Schema 規格的 Mock DataFrame (2 天賽事, 2 場賽事, 3 匹馬)"""
+        self.df = pd.DataFrame(
+            {
+                "race_id": ["R101", "R101", "R101", "R102", "R102"],
+                "horse_id": ["H1", "H2", "H3", "H1", "H2"],
+                "date": [
+                    "2024-01-01",
+                    "2024-01-01",
+                    "2024-01-01",
+                    "2024-01-15",
+                    "2024-01-15",
+                ],
+                "venue": ["ST", "ST", "ST", "HV", "HV"],
+                "race_class": [
+                    "Class 3",
+                    "Class 3",
+                    "Class 3",
+                    "Class 2",
+                    "Class 2",
+                ],
+                "track_type": [
+                    "TURF",
+                    "TURF",
+                    "TURF",
+                    "ALL WEATHER TRACK",
+                    "ALL WEATHER TRACK",
+                ],
+                "draw": [1, 5, 12, 3, 8],
+                "distance": [1200, 1200, 1200, 1650, 1650],
+                "placing": [1, 2, 5, 3, 1],
+                "finish_time_sec": [70.0, 70.5, 72.0, 100.0, 99.5],
+                "actual_weight": [133, 125, 118, 130, 120],
+                "declared_weight": [1100, 1050, 1120, 1105, 1045],
+                "win_odds": [2.5, 4.0, 15.0, 5.0, 3.2],
+                "rating": [75, 68, 60, 80, 72],
+                "import_date": [
+                    "2023-05-10",
+                    "2023-08-01",
+                    "2023-01-15",
+                    "2023-05-10",
+                    "2023-08-01",
+                ],
+                "jockey": [
+                    "Z Purton",
+                    "K Teetan",
+                    "C Ho",
+                    "Z Purton",
+                    "K Teetan",
+                ],
+                "trainer": ["J Size", "KW Lui", "AS Cruz", "J Size", "KW Lui"],
+                "sire": [
+                    "Fastnet Rock",
+                    "Tavistock",
+                    "Frankel",
+                    "Fastnet Rock",
+                    "Tavistock",
+                ],
+                # 分段名次與時間資料 (模擬 Section 1)
+                "section_no": [1, 1, 1, 1, 1],
+                "position": [1, 3, 8, 2, 5],
+                "sectional_time_sec": [13.2, 13.5, 14.0, 13.0, 13.4],
+            }
+        )
+        self.key_cols = ["race_id", "horse_id"]
+
+    # --- 原有 7 個 Generator 測試 ---
+
+    def test_horse_profile_generator(self):
+        gen = HorseProfileGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    def test_horse_rolling_generator(self):
+        gen = HorseRollingGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    def test_sectional_speed_generator(self):
+        gen = SectionalSpeedGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    def test_track_distance_generator(self):
+        gen = TrackDistanceGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    def test_human_sire_generator(self):
+        gen = HumanSireGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    def test_context_relative_generator(self):
+        gen = ContextRelativeGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    def test_interaction_generator(self):
+        gen = InteractionGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+    # --- 新增 5 個 Generator 測試 ---
+
+    def test_odds_market_generator(self):
+        """測試賠率與市場關注度生成器"""
+        gen = OddsMarketGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+        # 驗證隱含勝率 (1 / 2.5 = 0.4)
+        self.assertAlmostEqual(features["odds_implied_prob"].iloc[0], 0.4)
+        # 驗證熱門馬標記 (2.5 賠率 -> 1.0)
+        self.assertEqual(features["is_market_favorite"].iloc[0], 1.0)
+
+    def test_injury_rest_generator(self):
+        """測試參賽節奏與久休復出生成器"""
+        gen = InjuryRestGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+        # H1 第 2 場比賽 (2024-01-15 - 2024-01-01 = 14 天)
+        self.assertEqual(features["days_since_last_race"].iloc[3], 14.0)
+        self.assertEqual(features["is_layoff_60d"].iloc[3], 0.0)
+
+    def test_synergy_fitness_generator(self):
+        """測試騎師馬匹默契與換人效應生成器"""
+        gen = SynergyFitnessGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+        # H1 兩場皆由 Z Purton 騎乘，故第 2 場 is_jockey_changed 應為 0
+        self.assertEqual(features["is_jockey_changed"].iloc[3], 0.0)
+
+    def test_pace_strategy_generator(self):
+        """測試跑法類型與 Pace 壓力生成器"""
+        gen = PaceStrategyGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+        self.assertIn("horse_avg_sec1_pos_3", features.columns)
+        self.assertIn("race_front_runner_count", features.columns)
+
+    def test_rating_class_generator(self):
+        """測試評分變動與升降班生成器"""
+        gen = RatingClassGenerator(key_cols=self.key_cols)
+        features = gen.generate(self.df)
+
+        self.assertEqual(len(features), len(self.df))
+        LeakageGuard.validate_feature_dataframe(features, self.key_cols)
+
+        # H1 第 2 場評分變動 (80 - 75 = +5)
+        self.assertEqual(features["rating_change"].iloc[3], 5.0)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+```
+
+---
+
+### File: `tests\test_utils.py`
+
+```py
+import unittest
+import numpy as np
+import pandas as pd
+
+# 匯入你的 utils 模組
+# 如果資料夾叫 feature_new，請改為: from feature_new.utils import ...
+from features.utils import (
+    BayesianSmoother,
+    LeakageGuard,
+    RaceScaler,
+    SpeedTimeCalculator,
+    TrackEncoder,
+)
+
+
+class TestUtilsSuite(unittest.TestCase):
+
+    def setUp(self):
+        """建立測試用的造假 Dummy DataFrame (包含 2 場賽事, 3 匹馬)"""
+        self.df = pd.DataFrame(
+            {
+                "race_id": [101, 101, 101, 102, 102],
+                "horse_id": ["H1", "H2", "H3", "H1", "H2"],
+                "venue": ["ST", "ST", "ST", "HV", "HV"],
+                "track_type": [
+                    "TURF",
+                    "TURF",
+                    "TURF",
+                    "ALL WEATHER TRACK",
+                    "ALL WEATHER TRACK",
+                ],
+                "draw": [1, 5, 12, 3, 8],
+                "distance": [1200, 1200, 1200, 1650, 1650],
+                "finish_time_sec": [70.0, 71.0, 72.0, 100.0, 102.0],
+                "actual_weight": [133, 125, 118, 130, 120],
+                "target_win": [1, 0, 0, 0, 1],
+                "target_place": [1, 1, 0, 1, 1],
+            }
+        )
+
+    def test_bayesian_smoother(self):
+        """測試貝氏平滑與 shift(1) 防 Data Leakage 邏輯"""
+        # 1. 測試全域平滑勝率
+        res = BayesianSmoother.calc_global_smooth_rate(
+            df=self.df,
+            group_cols="horse_id",
+            target_col="target_win",
+            prior_alpha=10.0,
+            baseline_rate=0.1,
+        )
+
+        # H1 在第 1 場賽向前沒有歷史紀錄，平滑值必須嚴格等於 Prior Baseline (10 * 0.1 / 10 = 0.1)
+        self.assertAlmostEqual(res.iloc[0], 0.1)
+
+        # H1 在第 2 場賽事 (列索引 3)，歷史累積 1 出賽 1 贏
+        # 平滑值應為 (1 + 10 * 0.1) / (1 + 10) = 2.0 / 11.0 = 0.181818...
+        self.assertAlmostEqual(res.iloc[3], 2.0 / 11.0)
+
+        # 2. 測試滾動統計 (Rolling Mean)
+        rolling_weight = BayesianSmoother.calc_rolling_stat(
+            df=self.df,
+            group_cols="horse_id",
+            value_col="actual_weight",
+            window_size=3,
+            stat_type="mean",
+        )
+        # H1 第 1 場比賽前無歷史負重，應為 NaN
+        self.assertTrue(pd.isna(rolling_weight.iloc[0]))
+        # H1 第 2 場比賽前的滾動平均負重應為第 1 場的 133.0
+        self.assertEqual(rolling_weight.iloc[3], 133.0)
+
+    def test_race_scaler(self):
+        """測試同場賽事標準化與排名計算"""
+        # 1. 測試 Z-score
+        z = RaceScaler.race_z_score(
+            self.df, race_col="race_id", value_col="actual_weight"
+        )
+        race_101_weights = [133, 125, 118]
+        mean_w = np.mean(race_101_weights)
+        std_w = np.std(race_101_weights, ddof=1)
+        expected_z_0 = (133 - mean_w) / std_w
+        self.assertAlmostEqual(z.iloc[0], expected_z_0)
+
+        # 2. 測試同場平均差額 (Diff from Mean)
+        diff = RaceScaler.race_diff_from_mean(
+            self.df, race_col="race_id", value_col="actual_weight"
+        )
+        self.assertAlmostEqual(diff.iloc[0], 133 - mean_w)
+
+        # 3. 測試同場負重排名 (最重的馬排第 1)
+        rank = RaceScaler.race_rank(
+            self.df,
+            race_col="race_id",
+            value_col="actual_weight",
+            ascending=False,
+        )
+        self.assertEqual(rank.iloc[0], 1)  # 133磅最高，第 1 名
+        self.assertEqual(rank.iloc[2], 3)  # 118磅最低，第 3 名
+
+    def test_speed_time_calculator(self):
+        """測試速度 (m/s) 與時間折算"""
+        speed = SpeedTimeCalculator.calc_speed_mps(
+            self.df["distance"], self.df["finish_time_sec"]
+        )
+        self.assertAlmostEqual(speed.iloc[0], 1200 / 70.0)
+
+        norm_time = SpeedTimeCalculator.normalize_time_by_distance(
+            self.df["finish_time_sec"], self.df["distance"], target_dist=1200
+        )
+        self.assertAlmostEqual(norm_time.iloc[0], 70.0)
+        self.assertAlmostEqual(norm_time.iloc[3], (100.0 / 1650) * 1200)
+
+    def test_track_encoder(self):
+        """測試場地與檔位編碼器"""
+        course = TrackEncoder.categorize_course_type(self.df["track_type"])
+        self.assertEqual(course.iloc[0], "TURF")
+        self.assertEqual(course.iloc[3], "AWT")
+
+        combo = TrackEncoder.create_track_draw_combo(
+            self.df["venue"], self.df["track_type"], self.df["draw"]
+        )
+        self.assertEqual(combo.iloc[0], "ST_TURF_DRAW_1")
+        self.assertEqual(combo.iloc[3], "HV_AWT_DRAW_3")
+
+    def test_leakage_guard(self):
+        """測試防護斷言工具"""
+        corr = LeakageGuard.check_future_leakage(
+            self.df, "actual_weight", "target_win"
+        )
+        self.assertIsInstance(corr, float)
+
+        # 斷言 Primary Keys 是否完整
+        LeakageGuard.assert_no_null_keys(self.df, ["race_id", "horse_id"])
+        self.assertTrue(
+            LeakageGuard.validate_feature_dataframe(
+                self.df, ["race_id", "horse_id"]
+            )
+        )
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+```
+
+---
+
+### File: `utils\__init__.py`
+
+```py
+from .leak_guard import LeakageGuard
+from .scale import RaceScaler
+from .smoother import BayesianSmoother
+from .time_calc import SpeedTimeCalculator
+from .track_bias import TrackEncoder
+
+__all__ = [
+    "BayesianSmoother",
+    "RaceScaler",
+    "SpeedTimeCalculator",
+    "TrackEncoder",
+    "LeakageGuard",
+]
+```
+
+---
+
+### File: `utils\createFolder.py`
+
+```py
+import os
+
+dirs = ["smoother", "scale", "track_bias", "time_calc", "leak_guard"]
+
+for dir in dirs:
+    if not os.path.exists(f"feature//utils//{dir}.py"):
+        open(f"feature_new//utils//{dir}.py", "x")
+    else:
+        print(f"Directory '{dir}' already exists.")
+```
+
+---
+
+### File: `utils\leak_guard.py`
+
+```py
+import warnings
+from typing import List
+import numpy as np
+import pandas as pd
+
+
+class LeakageGuard:
+    """自動化檢查產出的 Feature DataFrame 是否存在 Data Leakage 或異常值。"""
+
+    @staticmethod
+    def check_future_leakage(
+        df: pd.DataFrame,
+        feature_col: str,
+        target_col: str,
+        threshold: float = 0.90,
+    ) -> float:
+        """檢查特徵與 Target 的相關性，若絕對值過高則自動發出警告。"""
+        valid_df = df[[feature_col, target_col]].dropna()
+        if len(valid_df) < 2:
+            return 0.0
+
+        corr = valid_df[feature_col].corr(valid_df[target_col])
+
+        # 處理 Pandas corr() 回傳 NaN 的情況
+        if pd.isna(corr):
+            return 0.0
+
+        corr_val = float(corr)
+
+        if abs(corr_val) >= threshold:
+            warnings.warn(
+                f"🚨 [LEAKAGE WARNING] 特徵 `{feature_col}` 與 Target `{target_col}` 的相關係數高達 {corr_val:.4f}！請檢查是否漏寫 `.shift(1)`！",
+                UserWarning,
+            )
+        return corr_val
+
+    @staticmethod
+    def assert_no_null_keys(df: pd.DataFrame, key_cols: List[str]):
+        """確保 Primary Keys 完全沒有缺失值。"""
+        for col in key_cols:
+            null_count = df[col].isnull().sum()
+            assert (
+                null_count == 0
+            ), f"❌ Key 欄位 `{col}` 包含 {null_count} 個 Null/NaN 缺失值！"
+
+    @staticmethod
+    def validate_feature_dataframe(
+        df: pd.DataFrame, required_keys: List[str]
+    ) -> bool:
+        """檢驗生成後的 Feature DataFrame 是否符合管道規格。"""
+        LeakageGuard.assert_no_null_keys(df, required_keys)
+        assert len(df) > 0, "❌ 產出的 Feature DataFrame 筆數為 0！"
+        return True
+```
+
+---
+
+### File: `utils\scale.py`
+
+```py
+import numpy as np
+import pandas as pd
+
+
+class RaceScaler:
+    """專門處理同場賽事（Race-Level）特徵相對化與標準化."""
+
+    @staticmethod
+    def race_z_score(
+        df: pd.DataFrame,
+        race_col: str,
+        value_col: str,
+        feature_name: str = None,
+    ) -> pd.Series:
+        """計算欄位在同場賽事中的 Z-Score (X - Mean) / Std."""
+        grp = df.groupby(race_col)[value_col]
+        mean = grp.transform("mean")
+        std = grp.transform("std").replace(0, 1e-6).fillna(1e-6)
+
+        z_score = (df[value_col] - mean) / std
+        return z_score.rename(
+            feature_name if feature_name else f"{value_col}_race_z"
+        )
+
+    @staticmethod
+    def race_diff_from_mean(
+        df: pd.DataFrame,
+        race_col: str,
+        value_col: str,
+        feature_name: str = None,
+    ) -> pd.Series:
+        """計算欄位與同場平均值的差額 (X - Mean)."""
+        mean = df.groupby(race_col)[value_col].transform("mean")
+        diff = df[value_col] - mean
+        return diff.rename(
+            feature_name if feature_name else f"{value_col}_diff_mean"
+        )
+
+    @staticmethod
+    def race_rank(
+        df: pd.DataFrame,
+        race_col: str,
+        value_col: str,
+        ascending: bool = False,
+        feature_name: str = None,
+    ) -> pd.Series:
+        """計算數值在同場賽事中的相對排名 (例如：賠率第幾高、負重第幾重)."""
+        rank = df.groupby(race_col)[value_col].rank(
+            ascending=ascending, method="min"
+        )
+        return rank.rename(
+            feature_name if feature_name else f"{value_col}_race_rank"
+        )
+```
+
+---
+
+### File: `utils\smoother.py`
+
+```py
+import numpy as np
+import pandas as pd
+
+
+class BayesianSmoother:
+    """
+    HKJC Quant 量化平滑器 (100% 保持輸入輸出 Index 對齊 + 嚴格防未來資訊洩漏)
+    """
+
+    @staticmethod
+    def calc_global_smooth_rate(
+        df: pd.DataFrame,
+        group_cols: list[str] | str,
+        target_col: str = None,
+        value_col: str = None,
+        prior_alpha: float = 2.0,
+        baseline_rate: float = 0.08,
+        **kwargs,
+    ) -> pd.Series:
+        col = target_col or value_col
+        if col is None:
+            raise ValueError("[BayesianSmoother] 必須指定 target_col 或 value_col")
+
+        if isinstance(group_cols, str):
+            group_cols = [group_cols]
+
+        # 1. 計算先驗 Alpha / Beta
+        prior_beta = prior_alpha * (1.0 - baseline_rate) / baseline_rate
+
+        # 2. 原位 shift(1) 避免未來數據洩漏 (按 Group 分組 shift)
+        shifted_target = df.groupby(group_cols)[col].shift(1)
+
+        # 3. 利用 transform 或 expanding 保持原 Index 結構不被 GroupBy 重排破壞
+        # 對 shifted_target 分組進行 Expanding
+        grp = shifted_target.groupby([df[c] for c in group_cols])
+
+        cum_wins = grp.transform(lambda x: x.expanding(min_periods=1).sum()).fillna(0.0)
+        cum_attempts = grp.transform(lambda x: x.expanding(min_periods=1).count()).fillna(0.0)
+
+        # 4. 貝氏平滑計算 (首仗/無歷史記錄時，自動退化為 baseline_rate，而非 0.0)
+        smoothed_rate = (cum_wins + prior_alpha) / (
+            cum_attempts + prior_alpha + prior_beta
+        )
+
+        # 精準恢復原 df 的 Index 與類型
+        return smoothed_rate.reindex(df.index).fillna(baseline_rate).astype("float32")
+
+    @staticmethod
+    def calc_rolling_smooth_rate(
+        df: pd.DataFrame,
+        group_cols: list[str] | str,
+        target_col: str = None,
+        value_col: str = None,
+        window: int = 5,
+        prior_alpha: float = 2.0,
+        baseline_rate: float = 0.08,
+        **kwargs,
+    ) -> pd.Series:
+        col = target_col or value_col
+        if col is None:
+            raise ValueError("[BayesianSmoother] 必須指定 target_col 或 value_col")
+
+        if isinstance(group_cols, str):
+            group_cols = [group_cols]
+
+        prior_beta = prior_alpha * (1.0 - baseline_rate) / baseline_rate
+        shifted_target = df.groupby(group_cols)[col].shift(1)
+        grp = shifted_target.groupby([df[c] for c in group_cols])
+
+        # 使用 transform 保持長度與 Index 完全一致
+        roll_wins = grp.transform(
+            lambda x: x.rolling(window=window, min_periods=1).sum()
+        ).fillna(0.0)
+        roll_attempts = grp.transform(
+            lambda x: x.rolling(window=window, min_periods=1).count()
+        ).fillna(0.0)
+
+        smoothed_rate = (roll_wins + prior_alpha) / (
+            roll_attempts + prior_alpha + prior_beta
+        )
+
+        return smoothed_rate.reindex(df.index).fillna(baseline_rate).astype("float32")
+
+    @staticmethod
+    def calc_rolling_stat(
+        df: pd.DataFrame,
+        group_cols: list[str] | str,
+        target_col: str = None,
+        value_col: str = None,
+        window: int = 5,
+        stat: str = "mean",
+        min_periods: int = 1,
+        **kwargs,
+    ) -> pd.Series:
+        col = target_col or value_col
+        if col is None:
+            raise ValueError("[BayesianSmoother] 必須指定 target_col 或 value_col")
+
+        if isinstance(group_cols, str):
+            group_cols = [group_cols]
+
+        # 1. 原位 shift(1) 避免未來資訊洩漏
+        shifted_target = df.groupby(group_cols)[col].shift(1)
+
+        # 2. 使用 transform 原位運算，100% 確保與輸入 df.index 一致
+        grp = shifted_target.groupby([df[c] for c in group_cols])
+        
+        # transform 滾動統計
+        res = grp.transform(
+            lambda x: getattr(x.rolling(window=window, min_periods=min_periods), stat)()
+        )
+
+        return res.reindex(df.index).astype("float32")
+```
+
+---
+
+### File: `utils\time_calc.py`
+
+```py
+from typing import Optional
+import pandas as pd
+
+
+class SpeedTimeCalculator:
+    """專門處理賽事時間、段速與標準化速度計算。"""
+
+    @staticmethod
+    def calc_speed_mps(
+        distance_col: pd.Series,
+        time_sec_col: pd.Series,
+        feature_name: Optional[str] = None,
+    ) -> pd.Series:
+        """計算平均每秒跑多少米 (Meters Per Second, m/s)。"""
+        valid_time = time_sec_col.replace(0, pd.NA)
+        speed = distance_col / valid_time
+        return speed.rename(
+            feature_name if feature_name else "speed_meters_per_sec"
+        )
+
+    @staticmethod
+    def normalize_time_by_distance(
+        time_sec_col: pd.Series,
+        distance_col: pd.Series,
+        target_dist: float = 1200.0,
+        feature_name: Optional[str] = None,
+    ) -> pd.Series:
+        """將不同路程的時間按比例折算至標準路程秒數（預設折算為 1200 米）。"""
+        valid_dist = distance_col.replace(0, pd.NA)
+        normalized_time = (time_sec_col / valid_dist) * target_dist
+        return normalized_time.rename(
+            feature_name
+            if feature_name
+            else f"norm_time_{int(target_dist)}m"
+        )
+```
+
+---
+
+### File: `utils\track_bias.py`
+
+```py
+from typing import Optional
+import pandas as pd
+
+
+class TrackEncoder:
+    """跑道條件、路程與檔位組合的編碼與清洗器。"""
+
+    @staticmethod
+    def categorize_course_type(
+        track_type_col: pd.Series, feature_name: Optional[str] = None
+    ) -> pd.Series:
+        """將 track_type 統一歸類為 TURF (草地) 或 AWT (全天候/泥地)。"""
+
+        def _clean(val):
+            if pd.isna(val):
+                return "UNKNOWN"
+            s = str(val).upper().strip()
+            # 增強匹配條件，涵蓋 HKJC 常見的全天候/泥地標示
+            if any(
+                kw in s
+                for kw in ["ALL WEATHER", "DIRT", "AWT", "ALL-WEATHER"]
+            ):
+                return "AWT"
+            return "TURF"
+
+        res = track_type_col.apply(_clean)
+        return res.rename(
+            feature_name if feature_name else "course_type_clean"
+        )
+
+    @staticmethod
+    def create_track_draw_combo(
+        venue_col: pd.Series,
+        track_type_col: pd.Series,
+        draw_col: pd.Series,
+        feature_name: Optional[str] = None,
+    ) -> pd.Series:
+        """建立賽場+跑道+檔位組合 Key（例如：ST_TURF_DRAW_1）。"""
+        course_clean = TrackEncoder.categorize_course_type(track_type_col)
+        combo = (
+            venue_col.astype(str)
+            + "_"
+            + course_clean.astype(str)
+            + "_DRAW_"
+            + draw_col.astype(str)
+        )
+        return combo.rename(
+            feature_name if feature_name else "track_draw_combo_key"
+        )
+```
+
+---
+
