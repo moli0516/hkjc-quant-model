@@ -10,7 +10,6 @@ anaconda_projects
 .virtual_documents
 .vscode/
 backtests/
-config/*.json
 scraper_old/
 predict.py
 tests/
@@ -22,3 +21,5 @@ file_create.py
 code_packer.py
 train.py
 models_old/
+config/settings.json
+.active_config

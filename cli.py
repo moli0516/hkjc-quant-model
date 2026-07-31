@@ -60,6 +60,45 @@ class HKJCCLI:
             print("👉 請先執行：Step 5 特徵工程 Pipeline (Features Pipeline)\n")
         return has_features
 
+    def switch_settings(self, config_name: str = None) -> bool:
+        """切換 settings 設定檔並觸發模組熱重載以套用新設定"""
+        config_dir = settings.config_dir
+
+        if config_name is None:
+            # 互動式搜尋與選擇 JSON 設定檔
+            json_files = sorted([f.name for f in config_dir.glob("*.json")])
+            current_config = settings.config_path.name
+
+            print("\n⚙️  [設定檔切換選單]")
+            print(f"📌 當前生效設定檔: {current_config}")
+            print("📁 可用的設定檔列表:")
+            for idx, file_name in enumerate(json_files, 1):
+                prefix = "👉 " if file_name == current_config else "   "
+                print(f"  {prefix}{idx}. {file_name}")
+
+            choice = input(
+                f"\n請選擇設定檔編號 (1-{len(json_files)}) 或直接輸入檔名 [留空取消]: "
+            ).strip()
+
+            if not choice:
+                print("ℹ️  已取消切換設定檔。\n")
+                return False
+
+            if choice.isdigit() and 1 <= int(choice) <= len(json_files):
+                config_name = json_files[int(choice) - 1]
+            else:
+                config_name = choice
+
+        try:
+            active_name = settings.switch_config(config_name)
+            print(f"✅ 設定檔已成功切換並持久化儲存為: {active_name}")
+            # 切換設定檔後自動進行熱重載，確保所有 Module 與 Pipeline 重新載入新配置
+            self.reload_modules()
+            return True
+        except Exception as e:
+            print(f"❌ 切換設定檔失敗: {e}\n")
+            return False
+
     def reload_modules(self):
         """動態熱重載 (Hot Reload) 所有專案模組、生成器與 Pipeline"""
         print("\n🔄 正在掃描並熱重載所有專案模組...")
@@ -90,12 +129,13 @@ class HKJCCLI:
             except Exception as e:
                 logger.warning(f"⚠️ 模組 {mod_name} 重載失敗: {e}")
 
-        # 重新更新當前 CLI 作用域內的類別引用
+        # 重新更新當前 CLI 作用域內的類別與 settings 引用
         try:
             global CleaningPipeline, FeaturesPipeline, HorseScrapingPipeline
-            global RaceScrapingPipeline, RaceDataLoader, ModelPipeline, DBManager
+            global RaceScrapingPipeline, RaceDataLoader, ModelPipeline, DBManager, settings
 
             from cleaners.cleaner_pipeline import CleaningPipeline
+            from config.settings import settings
             from database.db_manager import DBManager
             from features.feature_pipeline import FeaturesPipeline
             from models.data_loader import RaceDataLoader
@@ -108,7 +148,7 @@ class HKJCCLI:
             self.trained_model = None
 
             print(
-                f"✅ 成功熱重載 {reloaded_count} 個模組！所有 Pipeline 類別已更新至最新版本。\n"
+                f"✅ 成功熱重載 {reloaded_count} 個模組！所有 Pipeline 類別與設定已更新至最新狀態。\n"
             )
         except Exception as e:
             print(f"❌ 類別重新繫結失敗: {e}\n")
@@ -320,7 +360,9 @@ class HKJCCLI:
         while True:
             try:
                 print("=" * 50)
-                print("🏇  HKJC 賽馬數據工程與機器學習模型 CLI 工具")
+                print(
+                    f"🏇  HKJC 賽馬數據工程與機器學習模型 CLI 工具 (當前設定: {settings.config_path.name})"
+                )
                 print("=" * 50)
                 print("1. 執行賽果和分段時間爬蟲")
                 print("2. 進行賽果和分段時間數據清洗")
@@ -331,12 +373,15 @@ class HKJCCLI:
                 print("T. 🎯 Optuna 自動尋優超參數 (Model Tuning)")
                 print("7. 🔮 執行賽事勝率預測 (Inference)")
                 print("8. ⚡ 執行一鍵全套 ETL + 特徵工程 + 模型訓練 (1 ➔ 6)")
+                print("S. ⚙️  切換並設定生效 settings.json (Switch Settings)")
                 print("R. 🔄 熱重載所有模組與腳本 (Reload Modules)")
                 print("0. 退出系統")
                 print("=" * 50)
 
                 choice = (
-                    input("請選擇要執行的功能 (0-8 / T / R，或按 Ctrl+C 退出): ")
+                    input(
+                        "請選擇要執行的功能 (0-8 / T / S / R，或按 Ctrl+C 退出): "
+                    )
                     .strip()
                     .upper()
                 )
@@ -378,6 +423,8 @@ class HKJCCLI:
                         self.run_horse_cleaner()
                         self.run_features_pipeline()
                         self.run_model_pipeline()
+                elif choice == "S":
+                    self.switch_settings()
                 elif choice == "R":
                     self.reload_modules()
                 elif choice == "0":
@@ -439,6 +486,11 @@ def main():
     )
 
     parser.add_argument(
+        "--config",
+        type=str,
+        help="切換使用的設定檔路徑或檔名 (例: settings_dev.json)",
+    )
+    parser.add_argument(
         "--start-date", type=str, help="賽事爬蟲/預測起始日期 (YYYY-MM-DD)"
     )
     parser.add_argument(
@@ -460,7 +512,11 @@ def main():
     args = parser.parse_args()
     cli = HKJCCLI()
 
-    # 若無指定 CLI 旗標，開啟互動式介面
+    # 如果命令列中傳入了 --config，優先處理設定檔切換
+    if args.config:
+        cli.switch_settings(args.config)
+
+    # 若無指定任何執行動作的 CLI 旗標，開啟互動式介面
     if not any(
         [
             args.scrape_races,

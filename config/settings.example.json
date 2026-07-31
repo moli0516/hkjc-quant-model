@@ -1,28 +1,28 @@
 {
-    "last_updated": "2026-07-16",
+    "last_updated": "2026-07-31",
     "smoothing_params": {
         "default_alpha": 20,
         "alphas": {
             "jockey": 20,
             "trainer": 20,
-            "jockey_trainer": 40,
-            "horse_id": 8,
-            "draw": 30,
-            "horse_track": 25,
-            "horse_env": 35,
-            "horse_yield": 40,
-            "jockey_track": 15,
+            "jockey_trainer": 30,
+            "horse_id": 10,
+            "draw": 20,
+            "horse_track": 20,
+            "horse_env": 20,
+            "horse_yield": 20,
+            "jockey_track": 20,
             "jockey_env": 20,
-            "jockey_yield": 25,
+            "jockey_yield": 20,
             "trainer_track": 20,
-            "trainer_yield": 30
+            "trainer_yield": 20
         }
     },
     "rating_map": {
-        "1": 100, "2": 85, "3": 70, "4": 50, "5": 30
+        "1": 100, "2": 80, "3": 60, "4": 40, "5": 20
     },
     "track_bias_map": {
-        "A": 1.2, "B": 1.1, "C": 0.8, "C+3": 0.7
+        "A": 1.0, "B": 1.0, "C": 1.0, "C+3": 1.0
     },
     "active_features": [
         "j_smoothed_place_rate", 
@@ -32,6 +32,9 @@
     ],
     "paths": {
         "raw_json_dir": "data/raw_json",
+        "raw_races_json_dir": "races",
+        "raw_sectional_json_dir": "sectional",
+        "raw_horses_json_dir": "horses",
         "horses_sub_dir": "horses",
         "races_sub_dir": "races",
         "flattened_json_dir": "data/cleaned_json/flatten",
@@ -39,6 +42,12 @@
         "rating_json_path": "data/horses_rating.json",
         "features_parquet_path": "data/features.parquet",
         "today_rc_json_path": "data/today_rc.json"
+    },
+    "data_loader": {
+        "id_cols": ["race_id", "horse_id", "horse_name"],
+        "target_cols": ["placing", "is_win", "is_top3"],
+        "eval_cols": ["win_odds", "draw", "jockey", "trainer", "date"],
+        "categorical_cols": ["brand_prefix", "course_type", "track_draw_key"]
     },
     "base_features": [
         "j_smoothed_win_rate",
@@ -49,17 +58,17 @@
         "jockey_adaptability_x_rank_weight",
         "h_smoothed_rolling_5_texture_place_rate_sand",
         "h_smoothed_rolling_5_place_rate",
-        "j_yield_smoothed_place_rate",
-        "jt_smoothed_place_rate",
         "adj_draw",
-        "h_env_smoothed_place_rate",
-        "h_race_count_history",
-        "d_smoothed_place_rate",
-        "d_smoothed_win_rate"
+        "jt_smoothed_place_rate"
     ],
     "candidate_features": [
+        "j_yield_smoothed_place_rate",
+        "h_env_smoothed_place_rate",
         "j_smoothed_rolling_30_place_rate",
         "jt_smoothed_rolling_15_place_rate",
+        "h_race_count_history",
+        "d_smoothed_win_rate",
+        "d_smoothed_place_rate",
         "weight_delta",
         "j_env_smoothed_place_rate",
         "draw_speed_interaction",
@@ -71,5 +80,19 @@
         "h_smoothed_rolling_5_texture_win_rate_turf"
     ],
     "PHYSICAL_FEATURES": [],
-    "target": "is_place"
+    "target": "is_place",
+    "default_params": {
+        "objective": "rank:ndcg",
+        "max_depth": 6,
+        "learning_rate": 0.05,
+        "n_estimators": 500,
+        "early_stopping_rounds": 50,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "random_state": 42,
+        "n_jobs": -1,
+        "tree_method": "hist"
+    }
 }

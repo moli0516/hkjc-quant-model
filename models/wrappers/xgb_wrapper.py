@@ -7,6 +7,7 @@ from xgboost import XGBRanker
 
 from models.base_model import BaseModel
 from models.registry import ModelRegistry
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,21 +22,7 @@ class XGBRankerWrapper(BaseModel):
     def __init__(self, model_params: Optional[dict] = None):
         super().__init__(model_params)
 
-        default_params = {
-    "objective": "rank:ndcg",
-    "max_depth": 5,
-    "learning_rate": 0.02241986575232448,
-    "n_estimators": 1100,
-    "early_stopping_rounds": 137,
-    "subsample": 0.7551375320147171,
-    "colsample_bytree": 0.5807601058725049,
-    "reg_alpha": 0.07583278924335168,
-    "reg_lambda": 20.477793985681824,
-    # 💡 建議搭配的通用硬體與重現性設定：
-    "random_state": 42,
-    "n_jobs": -1,
-    "tree_method": "hist",  # 若有 GPU 可改為 "hist" 並搭配 device="cuda"
-}
+        default_params = settings.default_params
 
         if self.model_params:
             default_params.update(self.model_params)
