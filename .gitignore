@@ -22,7 +22,7 @@ code_packer.py
 train.py
 models_old/
 config/settings.json
-features/generators/
+features/generators/*
 !features/generators/example_generator.py
 !features/generators/__init__.py
 .active_config
