@@ -140,11 +140,15 @@ class Settings:
     @property
     def default_params(self):
         """最優模型參數"""
-        return self.data_loader_config.get("default_params", {})
+        return self._data.get("default_params", {})
 
     @property
     def categorical_cols(self):
         """類別型特徵欄位"""
         return self.data_loader_config.get("categorical_cols", ["brand_prefix", "course_type", "track_draw_key"])
+    
+    @property
+    def banned_features(self):
+        return self._data.get("banned_features", [])
 
 settings = Settings()

@@ -52,42 +52,6 @@ class RaceDataLoader:
             settings.id_cols + settings.target_cols + settings.eval_cols
         )
 
-        # 2. 🚨【無條件絕對剔除】當場賽果數據 (Post-race Data Leakage)
-        post_race_leakage_cols = [
-            "placing",
-            "finish_time_sec",
-            "finish_time_race_z",  # 當場完賽時間 Z-Score
-            "last_400m_speed_z",  # 當場末腳速度 Z-Score
-            "early_pace_expenditure_z",  # 當場早段搶放 Z-Score
-            "speed_mps_last_sectional",
-            "sectional_time_last",
-            "sec1_time",
-            "sec2_time",
-            "sec3_time",
-            "sec4_time",
-            "sec5_time",
-            "sec6_time",
-            "position",
-            "plc",
-            "margin_len",
-        ]
-        exclude_set.update(post_race_leakage_cols)
-
-        # 3. 🛡️【完全無條件剔除】所有賠率與市場相關特徵 (Odds & Market Features)
-        strict_odds_cols = [
-            "win_odds",
-            "win_odds_race_z",
-            "win_odds_race_rank",
-            "odds_implied_prob",
-            "is_market_favorite",
-            "odds_race_zscore",
-            "win_odds_inv",
-            "odds_vs_history_win_rate_gap",
-            "odds_rank_in_race",
-            "implied_prob_share",
-        ]
-        exclude_set.update(strict_odds_cols)
-
         # 額外掃描並無條件剔除欄位名稱中包含 'odds' 或 'market' 的動態欄位
         odds_features = [
             col
@@ -168,6 +132,7 @@ class RaceDataLoader:
         :return: (processed_df, feature_cols, groups)
         """
         cache_key = False  # 強制快取 Key 為不含賠率狀態
+        self.clear_cache()
 
         # 💡 1. 檢查記憶體快取：若已有快取且未要求強制重載，直接返回
         if not force_reload and cache_key in self._cache:

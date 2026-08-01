@@ -12,7 +12,6 @@ class RankingMetrics:
     """
 
     @staticmethod
-    @staticmethod
     def top_k_win_rate(
         df: pd.DataFrame, 
         pred_score_col: str = "pred_score", 
@@ -20,32 +19,42 @@ class RankingMetrics:
         group_col: str = "race_id",
         k: int = 1
     ) -> float:
+        """
+        計算 Top-K 命中率：
+        - k = 1 (獨贏率 Win Rate): 模型預測第 1 名的馬匹，實際是否獲得冠軍 (placing == 1)
+        - k > 1 (位置率 Place Rate): 模型預測第 1 名的馬匹，實際是否跑進前 K 名 (placing <= k)
+        """
         if group_col not in df.columns or pred_score_col not in df.columns or target_placing_col not in df.columns:
             raise ValueError(f"【錯誤】缺少必要欄位，請檢查是否包含 '{group_col}', '{pred_score_col}', '{target_placing_col}'")
+
+        if df.empty:
+            return 0.0
 
         hits = 0
         total_races = 0
 
         for _, group in df.groupby(group_col):
-            if len(group) == 0:
+            if group.empty:
                 continue
             
             total_races += 1
-            # 取預測分數最高的前 K 匹馬
-            top_k_preds = group.sort_values(by=pred_score_col, ascending=False).head(k)
-            actual_placings = top_k_preds[target_placing_col].values
+            
+            # 取模型預測分數最高 (Top 1) 的馬匹
+            top1_pred_horse = group.sort_values(by=pred_score_col, ascending=False).iloc[0]
+            actual_placing = top1_pred_horse[target_placing_col]
             
             if k == 1:
-                # 獨贏/冠中率：預測第 1 名實際是否為冠軍 (placing == 1)
-                if actual_placings[0] == 1:
+                # 獨贏命中率：預測第 1 名實際是否為冠軍
+                if actual_placing == 1:
                     hits += 1
             else:
-                # 位置/上名率（精確計算）：計算預測前 K 名中有幾匹馬實際名次 <= k
-                # 例如 k=3 時，計算 3 匹預測前三名中有幾匹實際跑進前三名
-                hits += np.sum(actual_placings <= k) / k
+                # 位置命中率：預測第 1 名實際是否跑進前 K 名 (例如前 3 名)
+                if actual_placing <= k:
+                    hits += 1
 
         win_rate = hits / total_races if total_races > 0 else 0.0
         return float(win_rate)
+
     @staticmethod
     def mean_ndcg_score(
         df: pd.DataFrame,
@@ -67,9 +76,12 @@ class RankingMetrics:
         if group_col not in df.columns or pred_score_col not in df.columns or target_relevance_col not in df.columns:
             raise ValueError("【錯誤】缺少計算 NDCG 所需的必要欄位！")
 
+        if df.empty:
+            return 0.0
+
         ndcg_scores = []
 
-        for _, group in df.groupby(group_col):
+        for race_id, group in df.groupby(group_col):
             if len(group) < 2:
                 # 若賽事馬匹數量小於 2，無法有效計算排序，略過
                 continue
@@ -85,7 +97,7 @@ class RankingMetrics:
                 score = ndcg_score(y_true, y_pred, k=k)
                 ndcg_scores.append(score)
             except Exception as e:
-                logger.warning(f"⚠️ 計算賽事 {group[group_col].iloc[0]} 的 NDCG 時發生異常: {e}")
+                logger.warning(f"⚠️ 計算賽事 {race_id} 的 NDCG 時發生異常: {e}")
 
         if not ndcg_scores:
             return 0.0
