@@ -113,45 +113,19 @@ R. 🔄 熱重載所有模組與腳本 (Reload Modules)
 
 | 參數名稱 | 類型 | 預設值 | 用途說明 |
 | --- | --- | --- | --- |
-| `--scrape-races` | Flag | 無 | 啟動爬蟲模組，抓取賽事基本資料與分段時間。
-
- |
-| `--clean-races` | Flag | 無 | 執行清洗模組，處理賽事與分段數據並寫入資料庫。
-
- |
-| `--scrape-horses` | Flag | 無 | 針對資料庫中缺乏資料的馬匹，發起馬匹資料爬蟲任務。
-
- |
-| `--clean-horses` | Flag | 無 | 清洗馬匹原始 JSON 資料並更新至資料庫的 `horses` 表。
-
- |
-| `--generate-features` | Flag | 無 | 讀取資料庫進行全量特徵工程計算，並產生 `feature_matrix`。
-
- |
-| `--train-model` | Flag | 無 | 基於當前資料庫特徵，啟動模型訓練管線。
-
- |
-| `--tune-model` | Flag | 無 | 執行 Optuna 尋優任務，自動搜尋最佳超參數。
-
- |
-| `--predict` | Flag | 無 | 執行未來或指定日期的賽事推論預測。
-
- |
-| `--all` | Flag | 無 | 一鍵依序執行全套流程：爬蟲賽果 ➔ 清洗賽果 ➔ 爬蟲馬匹 ➔ 清洗馬匹 ➔ 特徵工程 ➔ 模型訓練。
-
- |
-| `--start-date` | Option | `None` | 指定賽事爬蟲或預測推論的起始日期，格式為 `YYYY-MM-DD`。
-
- |
-| `--end-date` | Option | `None` | 指定賽事爬蟲的結束日期，格式為 `YYYY-MM-DD`。
-
- |
-| `--model-type` | Option | `xgb_ranker` | 選擇要訓練或尋優的模型類型，如 `xgb_ranker`。
-
- |
-| `--n-trials` | Option | `30` | 指定 Optuna 超參數尋優的搜尋試驗次數。
-
- |
+| `--scrape-races` | Flag | 無 | 啟動爬蟲模組，抓取賽事基本資料與分段時間。|
+| `--clean-races` | Flag | 無 | 執行清洗模組，處理賽事與分段數據並寫入資料庫。|
+| `--scrape-horses` | Flag | 無 | 針對資料庫中缺乏資料的馬匹，發起馬匹資料爬蟲任務。|
+| `--clean-horses` | Flag | 無 | 清洗馬匹原始 JSON 資料並更新至資料庫的 `horses` 表。|
+| `--generate-features` | Flag | 無 | 讀取資料庫進行全量特徵工程計算，並產生 `feature_matrix`。|
+| `--train-model` | Flag | 無 | 基於當前資料庫特徵，啟動模型訓練管線。|
+| `--tune-model` | Flag | 無 | 執行 Optuna 尋優任務，自動搜尋最佳超參數。|
+| `--predict` | Flag | 無 | 執行未來或指定日期的賽事推論預測。|
+| `--all` | Flag | 無 | 一鍵依序執行全套流程：爬蟲賽果 ➔ 清洗賽果 ➔ 爬蟲馬匹 ➔ 清洗馬匹 ➔ 特徵工程 ➔ 模型訓練。|
+| `--start-date` | Option | `None` | 指定賽事爬蟲或預測推論的起始日期，格式為 `YYYY-MM-DD`。|
+| `--end-date` | Option | `None` | 指定賽事爬蟲的結束日期，格式為 `YYYY-MM-DD`。|
+| `--model-type` | Option | `xgb_ranker` | 選擇要訓練或尋優的模型類型，如 `xgb_ranker`。|
+| `--n-trials` | Option | `30` | 指定 Optuna 超參數尋優的搜尋試驗次數。|
 
 #### 使用範例與樣本輸出
 
