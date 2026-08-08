@@ -196,50 +196,24 @@ Integrate tasks into scheduling systems (e.g., Airflow, Cron) by passing explici
 
 | Argument         | Type | Default | Description                                        |
 | ---------------- | ---- | ------- | -------------------------------------------------- |
-| `--scrape-races` | Flag | `False` | Triggers race results and sectional times crawler. |
-
-|
-| `--clean-races` | Flag | `False` | Cleans raw race/sectional JSON files into SQLite.
-
-|
-| `--scrape-horses` | Flag | `False` | Crawls missing horse profiles based on DB gaps.
-
-|
-| `--clean-horses` | Flag | `False` | Cleans horse profile JSONs and updates `horses` table.
-
-|
+| `--scrape-races` | Flag | `False` | Triggers race results and sectional times crawler. ||
+| `--clean-races` | Flag | `False` | Cleans raw race/sectional JSON files into SQLite.|
+| `--scrape-horses` | Flag | `False` | Crawls missing horse profiles based on DB gaps.|
+| `--clean-horses` | Flag | `False` | Cleans horse profile JSONs and updates `horses` table.|
 | `--scrape-trackwork` | Flag | `False` | Crawls morning trackwork records for date ranges. |
 | `--clean-trackwork` | Flag | `False` | Cleans raw trackwork JSONs into `race_trackwork`. |
 | `--scrape-trails` | Flag | `False` | Crawls barrier trial results and metadata. |
 | `--clean-trails` | Flag | `False` | Cleans trial JSONs into `trials` and `trial_results`. |
-| `--generate-features` | Flag | `False` | Generates full time-sorted feature matrix into SQLite.
-
-|
-| `--train-model` | Flag | `False` | Trains specified model model with OOT validation.
-
-|
-| `--tune-model` | Flag | `False` | Runs Optuna hyperparameter optimization.
-
-|
-| `--predict` | Flag | `False` | Performs inference for upcoming or target race dates.
-
-|
-| `--all` | Flag | `False` | Runs complete end-to-end pipeline from scraping to training.
-
-|
+| `--generate-features` | Flag | `False` | Generates full time-sorted feature matrix into SQLite.|
+| `--train-model` | Flag | `False` | Trains specified model model with OOT validation.|
+| `--tune-model` | Flag | `False` | Runs Optuna hyperparameter optimization.|
+| `--predict` | Flag | `False` | Performs inference for upcoming or target race dates.|
+| `--all` | Flag | `False` | Runs complete end-to-end pipeline from scraping to training.|
 | `--config` | Option | `None` | Switches active configuration JSON (e.g., `settings_roi.json`). |
-| `--start-year` | Option | Current | Start year for date-range crawlers (YYYY).
-
-|
-| `--end-year` | Option | Current | End year for date-range crawlers (YYYY).
-
-|
-| `--model-type` | Option | `xgb_ranker` | Ranking architecture (`xgb_ranker`, `lgb_ranker`).
-
-|
-| `--n-trials` | Option | `30` | Number of Optuna hyperopt trials.
-
-|
+| `--start-year` | Option | Current | Start year for date-range crawlers (YYYY).|
+| `--end-year` | Option | Current | End year for date-range crawlers (YYYY).|
+| `--model-type` | Option | `xgb_ranker` | Ranking architecture (`xgb_ranker`, `lgb_ranker`).|
+| `--n-trials` | Option | `30` | Number of Optuna hyperopt trials.|
 
 ---
 
