@@ -24,12 +24,6 @@
     "track_bias_map": {
         "A": 1.0, "B": 1.0, "C": 1.0, "C+3": 1.0
     },
-    "active_features": [
-        "j_smoothed_place_rate", 
-        "h_smoothed_place_rate", 
-        "win_odds_inv", 
-        "log_win_odds"
-    ],
     "paths": {
         "raw_json_dir": "data/raw_json",
         "raw_races_json_dir": "races",
@@ -49,38 +43,7 @@
         "eval_cols": ["win_odds", "draw", "jockey", "trainer", "date"],
         "categorical_cols": ["brand_prefix", "course_type", "track_draw_key"]
     },
-    "base_features": [
-        "j_smoothed_win_rate",
-        "form_x_rank_weight",
-        "j_smoothed_place_rate",
-        "h_track_smoothed_place_rate",
-        "j_track_smoothed_place_rate",
-        "jockey_adaptability_x_rank_weight",
-        "h_smoothed_rolling_5_texture_place_rate_sand",
-        "h_smoothed_rolling_5_place_rate",
-        "adj_draw",
-        "jt_smoothed_place_rate"
-    ],
-    "candidate_features": [
-        "j_yield_smoothed_place_rate",
-        "h_env_smoothed_place_rate",
-        "j_smoothed_rolling_30_place_rate",
-        "jt_smoothed_rolling_15_place_rate",
-        "h_race_count_history",
-        "d_smoothed_win_rate",
-        "d_smoothed_place_rate",
-        "weight_delta",
-        "j_env_smoothed_place_rate",
-        "draw_speed_interaction",
-        "jt_smoothed_win_rate"
-    ],
-    "banned_features": [
-        "rating_strength_score",
-        "z_rating_vs_race_avg",
-        "h_smoothed_rolling_5_texture_win_rate_turf"
-    ],
-    "PHYSICAL_FEATURES": [],
-    "target": "is_place",
+    "banned_features": [],
     "default_params": {
         "objective": "rank:ndcg",
         "max_depth": 6,

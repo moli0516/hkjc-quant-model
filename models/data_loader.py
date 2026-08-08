@@ -132,7 +132,6 @@ class RaceDataLoader:
         :return: (processed_df, feature_cols, groups)
         """
         cache_key = False  # 強制快取 Key 為不含賠率狀態
-        self.clear_cache()
 
         # 💡 1. 檢查記憶體快取：若已有快取且未要求強制重載，直接返回
         if not force_reload and cache_key in self._cache:

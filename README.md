@@ -1,215 +1,278 @@
-# 🏇 HKJC Racing Quant: End-to-End ETL & Machine Learning Pipeline
+# 🏇 HKJC Racing Quant: End-to-End ETL & Quantitative Machine Learning Pipeline
 
-本專案是一個針對香港賽馬（HKJC）打造的端到端量化數據工程與機器學習預測系統。系統涵蓋了從網路爬蟲獲取原始數據、數據清洗正規化、特徵工程，一直到模型訓練與賽果推論的完整管線。
+An industrial-grade, end-to-end quantitative data engineering and machine learning system tailored specifically for Hong Kong Jockey Club (HKJC) horse racing analytics. The platform spans the entire data lifecycle: asynchronous web scraping, clean relational database storage, temporal leakage-proof feature engineering, out-of-time (OOT) model training, Optuna hyperparameter optimization, and real-world financial backtesting via Kelly Criterion betting strategies.
 
 ---
 
-## 🚀 系統安裝指南
+## 🏗️ System Architecture & Codebase Map
 
-為了順利運行本系統的各項數據管線與機器學習模型，請遵循以下步驟建立環境。
+The project adheres to a modular design separating scraping, cleaning, feature generation, model execution, and evaluation:
 
-### 環境準備與依賴安裝
+```text
+./
+├── cleaners/                    # Data Cleaning & Schema Normalization Pipeline
+│   ├── cleaner_pipeline.py      # Main Cleaning Manager
+│   ├── horses_cleaner.py        # Horse Profiles Parser & Normalizer
+│   ├── races_cleaner.py         # Race & Results Cleaner
+│   ├── sectional_cleaner.py     # Sectional Times & Positions Cleaner
+│   ├── trackwork_cleaner.py     # Trackwork & Morning Gallops Cleaner
+│   └── trails_cleaner.py        # Barrier Trials Metadata & Results Cleaner
+├── config/                      # Configuration Management
+│   ├── .active_config           # Persistent pointer to the active settings JSON
+│   ├── settings.py              # Dynamic Settings Proxy Loader
+│   ├── settings.json            # Base system & XGBoost hyperparameters
+│   └── settings_roi.json        # ROI-optimized financial settings profile
+├── database/                    # Relational Database Infrastructure
+│   ├── models/                  # SQLAlchemy ORM Data Models
+│   └── db_manager.py            # SQLite Connection Manager, Indexing, & Queries
+├── features/                    # Feature Engineering Architecture
+│   ├── generators/              # Dynamic Feature Generator Plugins
+│   │   ├── _example_generator.py# Dummy Data Generator for CI/CD Testing
+│   │   ├── body_weight_recovery.py
+│   │   ├── class_performance.py
+│   │   ├── context_relative.py  # Race-level z-scores, odds ranks & weights
+│   │   ├── horse_profile.py     # Horse tenure & HK residency features
+│   │   ├── horse_rolling.py     # Shifted rolling performance metrics
+│   │   ├── human_sire.py        # Jockey/Trainer/Sire historical statistics
+│   │   ├── injury_rest.py       # Rest days & layoff indicator features
+│   │   ├── interaction.py       # Cross-feature interactions & ratios
+│   │   ├── jockey_trainer_alpha.py
+│   │   ├── jockey_trainer_synergy.py
+│   │   ├── jt_recent_form.py
+│   │   ├── odds_market.py       # Market implied probability & favorite flags
+│   │   ├── pace_strategy.py     # Early pace & front-runner competition
+│   │   ├── rating_class.py      # Rating class changes & drops
+│   │   ├── ratinn_momentum.py   # Rating momentum & race-level advantages
+│   │   ├── sectional_brust.py   # Late sectional burst ratios
+│   │   ├── sectional_speed.py   # Sectional speeds & position gains
+│   │   ├── speed_feature.py     # Speed z-scores & pace expenditure
+│   │   ├── synergy_fitness.py   # Jockey switch & human-horse pairing stats
+│   │   ├── track_distance.py    # Track/Distance specific win rates
+│   │   ├── trackwork_feature.py # Trackwork activity & fast-work counts
+│   │   └── trail_feature.py     # Barrier trial forms, pass flags & comments
+│   ├── utils/                   # Feature Utilities
+│   │   ├── leak_guard.py        # Automated Data Leakage Validation
+│   │   ├── scale.py             # Race-level Scalers & Z-score Calculators
+│   │   ├── smoother.py          # Bayesian Smoothers & Shifted Rolling Stats
+│   │   ├── time_calc.py         # Speed (m/s) & Distance Normalization
+│   │   └── track_bias.py        # Track Type & Draw Category Encoders
+│   ├── base_target.py           # Base DataFrame Skeleton & Target Generator
+│   └── feature_pipeline.py      # Sequential Zero-Copy Feature Engine
+├── models/                      # Machine Learning & Quantitative Modeling
+│   ├── hyperopt/                # Hyperparameter Tuning Engine
+│   │   └── optuna_tuner.py      # Optuna Objective Wrappers & Tuner
+│   ├── metrics/                 # Quantitative & Financial Evaluation
+│   │   ├── calibration.py       # Odds-Aware Logistic Probability Calibrator
+│   │   ├── finance.py           # Kelly Criterion, EV, & ROI Backtesting Engine
+│   │   └── ranking.py           # Top-K Win Rates & Mean NDCG@K Metrics
+│   ├── validation/              # Strict Temporal Validation & Audit
+│   │   ├── micro_tracing.py     # Horse-level Micro-Tracer for Leakage Audit
+│   │   └── time_split.py        # Out-Of-Time (OOT) Time-Series Splitter
+│   ├── wrappers/                # Model Architecture Wrappers
+│   │   └── xgb_wrapper.py       # XGBRanker Wrapper
+│   ├── base_model.py            # Abstract Base Model Class
+│   ├── data_loader.py           # Strict No-Odds Data Loader Engine
+│   ├── model_pipeline.py        # End-to-End Model Execution & Inference Pipeline
+│   └── registry.py              # Dynamic Model Factory & Registry
+├── scraper/                     # Asynchronous Web Crawling System
+│   ├── parser/                  # Selectolax Fast HTML/JSON Parsers
+│   ├── hook.py                  # Aiohttp Async Session & Request Hook
+│   ├── race_pipeline.py         # Async Race Results Crawler
+│   ├── horse_pipeline.py        # Async Horse Profiles Crawler
+│   ├── trackwork_pipeline.py    # Async Trackwork JSON API Crawler
+│   └── trail_pipeline.py        # Async Barrier Trials Crawler
+└── cli.py                       # Unified CLI Command-Line Interface
 
-1. **複製專案庫**：請先將本專案複製到本地端環境。
-2. **建立虛擬環境**：建議使用 Python 3.10+ 建立獨立的虛擬環境（例如使用 `python -m venv .venv`），以避免套件衝突。
-3. **安裝依賴套件**：專案根目錄下附有 `requirements.txt`，請透過以下指令安裝所有必需的套件：
+```
+
+---
+
+## ⚡ Installation & Quick Start
+
+### 1. Requirements & Setup
+
+Ensure you have Python 3.10 or higher installed. Clone the repository and initialize a virtual environment:
+
 ```bash
+# Clone the repository
+git clone <repository_url>
+cd hkjc-racing-quant
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
 ```
 
+### 2. Infrastructure Initialization
 
-4. **目錄結構初始化**：系統依賴 `config/settings.json` 定義的路徑運作，執行管線時會自動在指定路徑建立 `data/` 與 `hkjc_racing.db` 等基礎設施。
-
-
-
----
-
-## 🔄 輸入、處理與輸出的生命週期 (Data Lifecycle)
-
-本系統的數據生命週期經過嚴格的解耦與結構化設計，分為以下三個主要階段：
-
-### 1. 輸入階段 (Input - Data Collection)
-
-* 系統透過 `scraper` 模組向下游發起請求，收集賽果、分段時間與馬匹詳細資料。
-
-
-* 收集到的原始資料會以 JSON 格式儲存於 `config/settings.json` 定義的目錄中（例如 `data/raw_json/races` 與 `data/raw_json/horses`）。
-
-
-
-### 2. 處理階段 (Processing - ETL & Feature Engineering)
-
-* **數據清洗 (Data Cleaning)**：`CleaningPipeline` 負責將零碎的 JSON 檔案載入，並透過 `races_cleaner`、`horses_cleaner` 等模組進行正規化、型別轉換與異常值處理。清洗後的資料會透過 SQLAlchemy 寫入 SQLite 資料庫（`hkjc_racing.db`）中的關聯式資料表（如 `races`, `race_results`, `horses`）。
-
-
-* **特徵工程 (Feature Engineering)**：`FeaturesPipeline` 會從資料庫載入合併後的完整歷史賽事數據。系統嚴格依照時間與賽事順序進行排序，防止未來數據洩漏（Data Leakage）。隨後動態掛載各類生成器（Generators），計算滾動統計、歷史勝率、相對賠率、同場 Z-score 等特徵。最終計算結果會被覆蓋寫入資料庫的 `feature_matrix` 表格中。
-
-
-
-### 3. 輸出階段 (Output - Modeling & Inference)
-
-* **模型訓練與尋優**：`ModelPipeline` 會提取 `feature_matrix` 與標籤，訓練機器學習模型（預設為 `xgb_ranker`）。系統亦整合了 Optuna 進行自動超參數尋優，優化目標為 `top1_win_rate` 等排名指標。
-
-
-* **推論預測 (Inference)**：使用者指定預測日期後，系統會載入當日特徵數據交由訓練好的模型進行推論，最終輸出包含馬匹 ID、預測排名（`pred_rank`）與預測分數（`pred_score`）的決策報表。
-
-
+The system automatically resolves data and database paths specified in `config/settings.json`. Executing any command via `cli.py` will automatically initialize directory structures (`data/raw_json/`, `data/cleaned_json/`) and build the SQLite relational database schema (`hkjc_racing.db`).
 
 ---
 
-## 🛠️ 統一入口程式：`cli.py` 使用指南
+## 🔄 End-to-End Data Lifecycle
 
-`cli.py` 是整個專案的統一操作入口，封裝了所有 ETL、特徵工程與模型訓練的底層呼叫。系統提供兩種主要的操作模式：直接執行的互動式 UI，以及透過引數（Arguments）驅動的命令列模式。
+Data moves strictly through three fully decoupled stages:
 
-### 方法 1：互動式 UI (Interactive Menu)
+```text
+[ Raw Web / API ] 
+       │
+       ▼ (Scraper Engine: aiohttp + selectolax)
+[ Raw JSON Storage ] ──> (data/raw_json/races, horses, trackworks, trails)
+       │
+       ▼ (Cleaners & DBManager: Pandas + SQLAlchemy)
+[ SQLite Relational DB ] ──> (Tables: races, race_results, horses, race_trackwork, trials)
+       │
+       ▼ (BaseTargetBuilder + FeaturesPipeline: Bayesian Smoother + Shift Guard)
+[ feature_matrix Table ] ──> (Strictly time-sorted, zero future leakage)
+       │
+       ▼ (ModelPipeline + XGBRanker: OOT Time Split)
+[ Trained Model & Predictions ] ──> (NDCG@K, Top-1 Win Rate, Kelly ROI Backtest)
 
-當您直接執行 `cli.py` 且不帶任何命令列參數時，系統會啟動互動式選單介面。
+```
 
-**使用用法：**
+1. **Ingestion (Raw Crawling)**:
+   The `scraper` module asynchronously fetches race cards, results, sectional times, horse profiles, morning trackwork, and barrier trials from HKJC servers, storing them as raw JSON documents.
+2. **ETL & Normalization**:
+   The `cleaners` module parses raw JSON files, performs type conversion, handles non-finishing codes (`WV`, `DNF`, `DISQ`), extracts numerical margins, and persists structured records into SQLite tables via SQLAlchemy ORM.
+3. **Feature Engineering**:
+   `FeaturesPipeline` executes dynamic feature generators ordered by `EXECUTION_ORDER`. All historical calculations rely on Bayesian smoothing and explicit `.shift(1)` operations to prevent post-race data leakage. The output is persisted into the `feature_matrix` database table.
+4. **Model Training & Financial Backtesting**:
+   `RaceDataLoader` streams the feature matrix while strictly stripping out odds features during training to prevent the ranking model from over-fitting to market consensus. Model predictions are evaluated using ranking metrics (`NDCG@K`, `Top-1 Win Rate`) and passed to `FinanceMetrics` for real-world Expected Value (EV) and Kelly Criterion backtesting.
+
+---
+
+## 🛠️ Command-Line Interface (`cli.py`) Usage
+
+`cli.py` is the mainentry point for executing scrapers, cleaning pipelines, feature generation, hyperparameter tuning, and inference.
+
+### Mode 1: Interactive Menu (Zero Arguments)
+
+Launch the interactive text menu by executing `cli.py` without flags:
 
 ```bash
 python cli.py
 
 ```
 
-**樣本輸出與互動流程：**
-
 ```text
 ==================================================
-🏇  HKJC 賽馬數據工程與機器學習模型 CLI 工具
+🏇 HKJC Racing Quant Engine & Machine Learning CLI (Config: settings.json)
 ==================================================
-1. 執行賽果和分段時間爬蟲
-2. 進行賽果和分段時間數據清洗
-3. 執行馬匹資料爬蟲 (需要先有賽果資料庫)
-4. 進行馬匹資料數據清洗
-5. ⚙️  生成量化特徵矩陣 (Features Pipeline)
-6. 🤖 訓練賽馬預測模型 (Model Pipeline)
-T. 🎯 Optuna 自動尋優超參數 (Model Tuning)
-7. 🔮 執行賽事勝率預測 (Inference)
-8. ⚡ 執行一鍵全套 ETL + 特徵工程 + 模型訓練 (1 ➔ 6)
-R. 🔄 熱重載所有模組與腳本 (Reload Modules)
-0. 退出系統
+1.  Run Race & Sectional Scraper
+2.  Run Race & Sectional Data Cleaner
+3.  Run Horse Profile Scraper (Requires Race DB)
+4.  Run Horse Profile Data Cleaner
+5.  Run Trackwork Scraper
+6.  Run Trackwork Data Cleaner
+7.  Run Barrier Trial Scraper
+8.  Run Barrier Trial Data Cleaner
+9.  ⚙️  Generate Quant Feature Matrix (Features Pipeline)
+10. 🤖 Train Racing Model (Model Pipeline)
+11. 🎯 Optuna Hyperparameter Optimization (Model Tuning)
+12. 🔮 Run Race Inference / Predictions
+13. ⚡ Run One-Key Full Pipeline (Steps 1 ➔ 10)
+14. ⚙️  Switch Active Settings Configuration
+15. 🔄 Hot-Reload All Modules & Generators
+0.  Exit
 ==================================================
-請選擇要執行的功能 (0-8 / T / R，或按 Ctrl+C 退出): 8
-
-🔄 開始一鍵執行全套 Pipeline (從爬蟲到模型訓練)...
-🚀 [Step 1] 開始執行：賽果與分段時間爬蟲...
-...
+Please select an option (0-15):
 
 ```
 
-* **熱重載功能**：在互動模式中輸入 `R`，可以在不關閉程式的情況下，動態重新載入所有專案模組與 Pipeline，適合開發階段除錯使用。
-
-
+* **Hot-Reload (`15`)**: Dynamically reloads Python modules and feature generators in memory without restarting the CLI session.
 
 ---
 
-### 方法 2：命令列參數模式 (CLI Arguments)
+### Mode 2: Automated CLI Arguments
 
-透過傳入不同的 Argument，可以將任務整合至排程系統（如 Cron 或 Airflow）中自動執行。
+Integrate tasks into scheduling systems (e.g., Airflow, Cron) by passing explicit arguments:
 
-#### 支援的各類參數 (Arguments) 與用途：
+#### Command-Line Arguments Reference:
 
-| 參數名稱 | 類型 | 預設值 | 用途說明 |
-| --- | --- | --- | --- |
-| `--scrape-races` | Flag | 無 | 啟動爬蟲模組，抓取賽事基本資料與分段時間。
 
- |
-| `--clean-races` | Flag | 無 | 執行清洗模組，處理賽事與分段數據並寫入資料庫。
+| Argument         | Type | Default | Description                                        |
+| ---------------- | ---- | ------- | -------------------------------------------------- |
+| `--scrape-races` | Flag | `False` | Triggers race results and sectional times crawler. |
 
- |
-| `--scrape-horses` | Flag | 無 | 針對資料庫中缺乏資料的馬匹，發起馬匹資料爬蟲任務。
+|
+| `--clean-races` | Flag | `False` | Cleans raw race/sectional JSON files into SQLite.
 
- |
-| `--clean-horses` | Flag | 無 | 清洗馬匹原始 JSON 資料並更新至資料庫的 `horses` 表。
+|
+| `--scrape-horses` | Flag | `False` | Crawls missing horse profiles based on DB gaps.
 
- |
-| `--generate-features` | Flag | 無 | 讀取資料庫進行全量特徵工程計算，並產生 `feature_matrix`。
+|
+| `--clean-horses` | Flag | `False` | Cleans horse profile JSONs and updates `horses` table.
 
- |
-| `--train-model` | Flag | 無 | 基於當前資料庫特徵，啟動模型訓練管線。
+|
+| `--scrape-trackwork` | Flag | `False` | Crawls morning trackwork records for date ranges. |
+| `--clean-trackwork` | Flag | `False` | Cleans raw trackwork JSONs into `race_trackwork`. |
+| `--scrape-trails` | Flag | `False` | Crawls barrier trial results and metadata. |
+| `--clean-trails` | Flag | `False` | Cleans trial JSONs into `trials` and `trial_results`. |
+| `--generate-features` | Flag | `False` | Generates full time-sorted feature matrix into SQLite.
 
- |
-| `--tune-model` | Flag | 無 | 執行 Optuna 尋優任務，自動搜尋最佳超參數。
+|
+| `--train-model` | Flag | `False` | Trains specified model model with OOT validation.
 
- |
-| `--predict` | Flag | 無 | 執行未來或指定日期的賽事推論預測。
+|
+| `--tune-model` | Flag | `False` | Runs Optuna hyperparameter optimization.
 
- |
-| `--all` | Flag | 無 | 一鍵依序執行全套流程：爬蟲賽果 ➔ 清洗賽果 ➔ 爬蟲馬匹 ➔ 清洗馬匹 ➔ 特徵工程 ➔ 模型訓練。
+|
+| `--predict` | Flag | `False` | Performs inference for upcoming or target race dates.
 
- |
-| `--start-date` | Option | `None` | 指定賽事爬蟲或預測推論的起始日期，格式為 `YYYY-MM-DD`。
+|
+| `--all` | Flag | `False` | Runs complete end-to-end pipeline from scraping to training.
 
- |
-| `--end-date` | Option | `None` | 指定賽事爬蟲的結束日期，格式為 `YYYY-MM-DD`。
+|
+| `--config` | Option | `None` | Switches active configuration JSON (e.g., `settings_roi.json`). |
+| `--start-year` | Option | Current | Start year for date-range crawlers (YYYY).
 
- |
-| `--model-type` | Option | `xgb_ranker` | 選擇要訓練或尋優的模型類型，如 `xgb_ranker`。
+|
+| `--end-year` | Option | Current | End year for date-range crawlers (YYYY).
 
- |
-| `--n-trials` | Option | `30` | 指定 Optuna 超參數尋優的搜尋試驗次數。
+|
+| `--model-type` | Option | `xgb_ranker` | Ranking architecture (`xgb_ranker`, `lgb_ranker`).
 
- |
+|
+| `--n-trials` | Option | `30` | Number of Optuna hyperopt trials.
 
-#### 使用範例與樣本輸出
+|
 
-**範例 A：執行特定日期的賽事預測推論**
+---
 
-```bash
-python cli.py --predict --start-date 2026-07-16
+### CLI Command Examples
 
-```
-
-**預期輸出：**
-
-```text
-🔮 [Step 7] 開始執行：賽事勝率預測推論 (Model Inference)...
-📥 正在載入推論資料 (日期條件: 2026-07-16)...
-
-📊 賽事預測排名結果 (Top 10 範例)：
-race_id             horse_id  pred_score  pred_rank  placing
-2026-07-16_ST_1     A123      1.845       1          1
-2026-07-16_ST_1     B456      1.210       2          3
-2026-07-16_ST_1     C789      0.542       3          2
-...
-✅ 推論計算完成！
-
-```
-
-**範例 B：自動化更新全套資料庫與訓練**
+**1. Run Complete Ingestion, Feature Pipeline, & Model Training for 2025–2026:**
 
 ```bash
-python cli.py --all --model-type xgb_ranker
+python cli.py --all --start-year 2025 --end-year 2026 --model-type xgb_ranker
 
 ```
 
-**預期輸出：**
+**2. Generate Feature Matrix & Perform Hyperparameter Optimization:**
 
-```text
-🚀 [Step 1] 開始執行：賽果與分段時間爬蟲...
-✅ 賽果與分段時間爬蟲完成！
-
-🧹 [Step 2] 開始執行：賽果與分段時間數據清洗...
-✅ 賽果與分段時間數據清洗完成，已寫入資料庫！
-
-🐎 [Step 3] 檢查資料庫狀態以進行馬匹資料爬蟲...
-📊 找到 15 匹需要更新的馬匹資料。
-✅ 馬匹資料爬蟲完成！
-
-🧹 [Step 4] 開始執行：馬匹資料數據清洗...
-✅ 馬匹資料數據清洗完成，已更新至資料庫！
-
-⚙️ [Step 5] 開始執行：全量量化特徵工程 Pipeline...
-📥 正在從資料庫載入全量賽事歷史數據...
-✅ 全量特徵工程計算完成！已成功寫入 25430 筆數據至資料庫。
-
-🤖 [Step 6] 開始執行：量化模型訓練與評估 (Model Pipeline)...
-🎯 使用模型架構: XGB_RANKER
-✅ 模型訓練與驗證完成！
-📊 評估指標詳細結果:
-   ├─ top1_win_rate: 0.2845
-   ├─ ndcg_score: 0.8231
+```bash
+python cli.py --generate-features --tune-model --n-trials 50 --model-type xgb_ranker
 
 ```
+
+**3. Run Inference for Upcoming Races using Custom ROI Settings Profile:**
+
+```bash
+python cli.py --config settings_roi.json --predict
+
+```
+
+---
+
+## 🔒 Quantitative Integrity & Leakage Prevention Rules
+
+1. **No Post-Race Data Leakage**:
+   Current-race finishing statistics (e.g., `finish_time_sec`, `sec1_time`..`sec6_time`, `margin_len`, `placing`) are strictly isolated. All historical aggregations (running position averages, speed ratios, win rates) apply an explicit `.shift(1)` step via `BayesianSmoother`.
+2. **Train/Val vs. Financial Pipeline Separation**:
+   Model training datasets generated by `RaceDataLoader` strictly ban market odds features (`win_odds`, `implied_prob_share`, `odds_race_zscore`) to force the ranker to learn fundamental racing mechanics rather than market consensus. Market odds are attached exclusively during financial evaluation (`FinanceMetrics`) to compute Expected Value (EV) and fractional Kelly Criterion bet sizes.
+3. **Micro-Tracing Leakage Audit**:
+   `ModelPipeline` automatically triggers `HorseMicroTracer` validation prior to training, auditing row-by-row time-series progression for individual horses to verify that no race $N$ outcome leaks into race $N$ features.

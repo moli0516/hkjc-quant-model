@@ -184,37 +184,6 @@ class HorseMicroTracer:
 
         # 5. 格式化主控台肉眼比對印出 (Micro-Tracing Output)
         if verbose:
-            print("\n" + "=" * 90)
-            print(f"🔍 [單匹馬微觀逐行印出 Micro-Tracing] 馬匹 ID: {horse_id} (出賽次數: {len(horse_df)} 場)")
-            print("=" * 90)
-
-            display_cols = [date_col_used]
-            if self.race_id_col in horse_df.columns:
-                display_cols.append(self.race_id_col)
-            display_cols.extend([self.target_col, "is_win"])
-            display_cols.extend(rolling_cols)
-            display_cols.append("_leakage_status")
-
-            header_str = f"{'Race#':<6} | " + " | ".join([f"{col:<15}" for col in display_cols])
-            print(header_str)
-            print("-" * len(header_str))
-
-            for idx, row in horse_df.iterrows():
-                row_str = f"#{idx+1:<5} | "
-                col_vals = []
-                for c in display_cols:
-                    v = row[c]
-                    if isinstance(v, pd.Timestamp):
-                        v_str = v.strftime("%Y-%m-%d")
-                    elif isinstance(v, float):
-                        v_str = f"{v:.4f}" if pd.notna(v) else "NaN"
-                    else:
-                        v_str = str(v)
-                    col_vals.append(f"{v_str:<15}")
-                row_str += " | ".join(col_vals)
-                print(row_str)
-
-            print("=" * 90)
             if is_passed:
                 print("🎉 [檢驗結果: 通過] 特徵 shift(1) 生效，第 N 場無當場賽果洩漏問題！")
             else:

@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+from datetime import datetime
 import gc
 import importlib
 import logging
@@ -57,8 +58,24 @@ class HKJCCLI:
             print(
                 "\n⚠️ [前置檢查失敗] 資料庫中找不到特徵矩陣數據 (feature_matrix)！"
             )
-            print("👉 請先執行：Step 5 特徵工程 Pipeline (Features Pipeline)\n")
+            print("👉 請先執行：Step 9 特徵工程 Pipeline (Features Pipeline)\n")
         return has_features
+
+    def _prompt_year_range(self) -> tuple[int, int]:
+        """互動式詢問爬蟲開始與結束年份，預設為今年"""
+        current_year = datetime.now().year
+        
+        start_in = input(f"請輸入爬蟲開始年份 [預設 {current_year}]: ").strip()
+        start_year = int(start_in) if start_in.isdigit() else current_year
+
+        end_in = input(f"請輸入爬蟲結束年份 [預設 {current_year}]: ").strip()
+        end_year = int(end_in) if end_in.isdigit() else current_year
+
+        if start_year > end_year:
+            print(f"⚠️ 開始年份 ({start_year}) 大於結束年份 ({end_year})，已自動調整為相同年份。")
+            end_year = start_year
+
+        return start_year, end_year
 
     def switch_settings(self, config_name: str = None) -> bool:
         """切換 settings 設定檔並觸發模組熱重載以套用新設定"""
@@ -154,10 +171,15 @@ class HKJCCLI:
             print(f"❌ 類別重新繫結失敗: {e}\n")
 
     # ---------------- 核心功能調用 ----------------
-    def run_race_scraper(self, start_date=None, end_date=None):
+    def run_race_scraper(self, start_year: int = None, end_year: int = None):
         print("🚀 [Step 1] 開始執行：賽果與分段時間爬蟲...")
+        if start_year is None or end_year is None:
+            start_year, end_year = self._prompt_year_range()
+
+        print(f"📅 爬蟲目標年份區間: {start_year} 年 ~ {end_year} 年")
         scraper = RaceScrapingPipeline()
-        scraper.run(start_date=start_date, end_date=end_date)
+        years = list(range(start_year, end_year + 1))
+        asyncio.run(scraper.run(years))
         print("✅ 賽果與分段時間爬蟲完成！\n")
 
     def run_race_cleaner(self):
@@ -188,9 +210,63 @@ class HKJCCLI:
         cleaner.run(action="horse")
         print("✅ 馬匹資料數據清洗完成，已更新至資料庫！\n")
 
+    def run_trackwork_scraper(self, start_year: int = None, end_year: int = None):
+        """執行晨操 (Trackwork) 資料爬蟲"""
+        print("🏇 [Step 5] 開始執行：晨操數據爬蟲 (Trackwork Scraper)...")
+        if start_year is None or end_year is None:
+            start_year, end_year = self._prompt_year_range()
+
+        print(f"📅 晨操爬蟲目標年份區間: {start_year} 年 ~ {end_year} 年")
+        try:
+            from scraper.trackwork_pipeline import TrackworkScrapingPipeline
+            scraper = TrackworkScrapingPipeline()
+            asyncio.run(scraper.run(start_year, end_year))
+            print("✅ 晨操數據爬蟲完成！\n")
+        except ImportError:
+            print("⚠️ 找不到 `scraper.trackwork_pipeline` 模組，請確認模組建立狀態。\n")
+        except Exception as e:
+            print(f"❌ 晨操數據爬蟲執行失敗: {e}\n")
+
+    def run_trackwork_cleaner(self):
+        """執行晨操 (Trackwork) 數據清洗"""
+        print("🧹 [Step 6] 開始執行：晨操數據清洗 (Trackwork Cleaner)...")
+        try:
+            cleaner = CleaningPipeline()
+            cleaner.run(action="trackwork")
+            print("✅ 晨操數據清洗完成，已更新至資料庫！\n")
+        except Exception as e:
+            print(f"❌ 晨操數據清洗執行失敗: {e}\n")
+
+    def run_trail_scraper(self, start_year: int = None, end_year: int = None):
+        """執行試閘 (Barrier Trials) 資料爬蟲"""
+        print("🏇 [Step 7] 開始執行：試閘數據爬蟲 (Trail Scraper)...")
+        if start_year is None or end_year is None:
+            start_year, end_year = self._prompt_year_range()
+
+        print(f"📅 試閘爬蟲目標年份區間: {start_year} 年 ~ {end_year} 年")
+        try:
+            from scraper.trail_pipeline import TrailScrapingPipeline
+            scraper = TrailScrapingPipeline()
+            asyncio.run(scraper.run(start_year, end_year))
+            print("✅ 試閘數據爬蟲完成！\n")
+        except ImportError:
+            print("⚠️ 找不到 `scraper.trail_pipeline` 模組，請確認模組建立狀態。\n")
+        except Exception as e:
+            print(f"❌ 試閘數據爬蟲執行失敗: {e}\n")
+
+    def run_trail_cleaner(self):
+        """新增：執行試閘 (Barrier Trials) 數據清洗"""
+        print("🧹 [Step 8] 開始執行：試閘數據清洗 (Trail Cleaner)...")
+        try:
+            cleaner = CleaningPipeline()
+            cleaner.run(action="trails")
+            print("✅ 試閘數據清洗完成，已更新至資料庫！\n")
+        except Exception as e:
+            print(f"❌ 試閘數據清洗執行失敗: {e}\n")
+
     def run_features_pipeline(self):
         """執行全量量化特徵工程 Pipeline (一次性計算以避免冷啟動斷層與時間洩漏)"""
-        print("⚙️ [Step 5] 開始執行：全量量化特徵工程 Pipeline...")
+        print("⚙️ [Step 9] 開始執行：全量量化特徵工程 Pipeline...")
         if not self.check_db_has_races():
             return
 
@@ -235,10 +311,10 @@ class HKJCCLI:
             print(f"❌ 特徵工程執行失敗: {e}\n")
 
     def run_model_pipeline(
-        self, model_type: str = "xgb_ranker", val_days: int = 30
+        self, model_type: str = "xgb_ranker", val_days: int = 90
     ):
-        """[Step 6] 執行機器學習模型訓練 Pipeline"""
-        print("🤖 [Step 6] 開始執行：量化模型訓練與評估 (Model Pipeline)...")
+        """[Step 10] 執行機器學習模型訓練與長週期 Out-of-Time 財務回測"""
+        print(f"🤖 [Step 10] 開始執行 Model Pipeline (驗證窗口: {val_days} 天)...")
         if not self.check_db_has_features():
             return
 
@@ -246,18 +322,16 @@ class HKJCCLI:
             model_pipe = ModelPipeline(db_manager=self.db)
             print(f"🎯 使用模型架構: {model_type.upper()}")
 
-            # 調用 ModelPipeline 中的 run_train_pipeline
             model, metrics = model_pipe.run_train_pipeline(
                 model_name=model_type, val_days=val_days
             )
 
-            # 保存已訓練的模型供後續推論直接使用
             self.trained_model = model
 
-            print("✅ 模型訓練與驗證完成！")
+            print(f"✅ 模型訓練與 {val_days} 天 Out-of-Time 驗證完成！")
             print(f"📊 評估指標詳細結果:")
             for metric_name, val in metrics.items():
-                print(f"   ├─ {metric_name}: {val:.4f}")
+                print(f"   ├─ {metric_name}: {val:.4f}" if isinstance(val, float) else f"   ├─ {metric_name}: {val}")
             print()
             return model, metrics
 
@@ -268,11 +342,11 @@ class HKJCCLI:
         self,
         model_type: str = "xgb_ranker",
         n_trials: int = 30,
-        val_days: int = 30,
+        val_days: int = 90,
         metric_name: str = "top1_win_rate",
     ):
-        """[Step 6.5] 執行 Optuna 自動超參數尋優 Pipeline"""
-        print("🎯 [Step 6.5] 開始執行：Optuna 自動超參數尋優 (Model Tuning)...")
+        """[Step 11] 執行 Optuna 自動超參數尋優 Pipeline"""
+        print("🎯 [Step 11] 開始執行：Optuna 自動超參數尋優 (Model Tuning)...")
         if not self.check_db_has_features():
             return
 
@@ -280,17 +354,15 @@ class HKJCCLI:
             model_pipe = ModelPipeline(db_manager=self.db)
             print(f"🎯 目標模型: {model_type.upper()} | 嘗試次數: {n_trials} | 優化目標: {metric_name}")
 
-            # 調用 ModelPipeline 中的 run_tune_pipeline
             best_params, best_model = model_pipe.run_tune_pipeline(
                 model_name=model_type,
                 n_trials=n_trials,
                 val_days=val_days,
                 metric_name=metric_name,
                 direction="maximize",
-                retrain_best=True,  # 自動以最佳參數重練並返回模型
+                retrain_best=True,
             )
 
-            # 保存最佳模型供後續推論使用
             if best_model is not None:
                 self.trained_model = best_model
 
@@ -305,8 +377,8 @@ class HKJCCLI:
             print(f"❌ 超參數尋優 Pipeline 執行失敗: {e}\n")
 
     def run_predictions(self, target_date: str = None):
-        """[Step 7] 執行未來/最新賽事預測推論"""
-        print("🔮 [Step 7] 開始執行：賽事勝率預測推論 (Model Inference)...")
+        """[Step 12] 執行未來/最新賽事預測推論"""
+        print("🔮 [Step 12] 開始執行：賽事勝率預測推論 (Model Inference)...")
 
         if self.trained_model is None:
             print("⚠️ 尚未在此 CLI 會話中訓練模型，嘗試自動啟動預設訓練流程...")
@@ -319,7 +391,6 @@ class HKJCCLI:
             model_pipe = ModelPipeline(db_manager=self.db)
             data_loader = RaceDataLoader(self.db)
 
-            # 載入推論用的賽事數據
             print(f"📥 正在載入推論資料 (日期條件: {target_date or '最新數據'})...")
             inference_df, _, _ = data_loader.load_dataset(include_odds=True)
 
@@ -332,7 +403,6 @@ class HKJCCLI:
                 print("⚠️ 找不到符合條件的推論數據，請檢查資料庫狀態。\n")
                 return
 
-            # 調用 ModelPipeline 推論方法
             result_df = model_pipe.run_inference_pipeline(
                 model=self.trained_model, inference_df=inference_df
             )
@@ -359,31 +429,34 @@ class HKJCCLI:
     def interactive_menu(self):
         while True:
             try:
-                print("=" * 50)
+                print("=" * 55)
                 print(
                     f"🏇  HKJC 賽馬數據工程與機器學習模型 CLI 工具 (當前設定: {settings.config_path.name})"
                 )
-                print("=" * 50)
-                print("1. 執行賽果和分段時間爬蟲")
-                print("2. 進行賽果和分段時間數據清洗")
-                print("3. 執行馬匹資料爬蟲 (需要先有賽果資料庫)")
-                print("4. 進行馬匹資料數據清洗")
-                print("5. ⚙️  生成量化特徵矩陣 (Features Pipeline)")
-                print("6. 🤖 訓練賽馬預測模型 (Model Pipeline)")
-                print("T. 🎯 Optuna 自動尋優超參數 (Model Tuning)")
-                print("7. 🔮 執行賽事勝率預測 (Inference)")
-                print("8. ⚡ 執行一鍵全套 ETL + 特徵工程 + 模型訓練 (1 ➔ 6)")
-                print("S. ⚙️  切換並設定生效 settings.json (Switch Settings)")
-                print("R. 🔄 熱重載所有模組與腳本 (Reload Modules)")
-                print("0. 退出系統")
-                print("=" * 50)
+                print("=" * 55)
+                print("1.  執行賽果和分段時間爬蟲")
+                print("2.  進行賽果和分段時間數據清洗")
+                print("3.  執行馬匹資料爬蟲 (需要先有賽果資料庫)")
+                print("4.  進行馬匹資料數據清洗")
+                print("5.  執行晨操資料爬蟲 (Trackwork Scraper)")
+                print("6.  進行晨操資料數據清洗 (Trackwork Cleaner)")
+                print("7.  🏇 執行試閘資料爬蟲 (Trail Scraper)")
+                print("8.  🧹 進行試閘資料數據清洗 (Trail Cleaner)")
+                print("9.  ⚙️  生成量化特徵矩陣 (Features Pipeline)")
+                print("10. 🤖 訓練賽馬預測模型 (Model Pipeline)")
+                print("11. 🎯 Optuna 自動尋優超參數 (Model Tuning)")
+                print("12. 🔮 執行賽事勝率預測 (Inference)")
+                print("13. ⚡ 執行一鍵全套 ETL + 特徵工程 + 模型訓練 (1 ➔ 10)")
+                print("14. ⚙️  切換並設定生效 settings.json (Switch Settings)")
+                print("15. 🔄 熱重載所有模組與腳本 (Reload Modules)")
+                print("0.  退出系統")
+                print("=" * 55)
 
                 choice = (
                     input(
-                        "請選擇要執行的功能 (0-8 / T / S / R，或按 Ctrl+C 退出): "
+                        "請選擇要執行的功能編號 (0-15，或按 Ctrl+C 退出): "
                     )
                     .strip()
-                    .upper()
                 )
 
                 if choice == "1":
@@ -395,16 +468,26 @@ class HKJCCLI:
                 elif choice == "4":
                     self.run_horse_cleaner()
                 elif choice == "5":
-                    self.run_features_pipeline()
+                    self.run_trackwork_scraper()
                 elif choice == "6":
-                    self.run_model_pipeline()
-                elif choice == "T":
+                    self.run_trackwork_cleaner()
+                elif choice == "7":
+                    self.run_trail_scraper()
+                elif choice == "8":
+                    self.run_trail_cleaner()
+                elif choice == "9":
+                    self.run_features_pipeline()
+                elif choice == "10":
+                    val_days_str = input("請輸入 val days (預設 90 日): ").strip()
+                    val_days = int(val_days_str) if val_days_str.isdigit() else 90
+                    self.run_model_pipeline(val_days=val_days)
+                elif choice == "11":
                     trials_in = input(
                         "請輸入 Optuna 搜尋輪數 (預設 30 次): "
                     ).strip()
                     n_trials = int(trials_in) if trials_in.isdigit() else 30
                     self.run_tune_pipeline(n_trials=n_trials)
-                elif choice == "7":
+                elif choice == "12":
                     date_input = (
                         input(
                             "輸入預測日期 (YYYY-MM-DD，留空則預測最新賽事): "
@@ -412,20 +495,25 @@ class HKJCCLI:
                         or None
                     )
                     self.run_predictions(target_date=date_input)
-                elif choice == "8":
+                elif choice == "13":
                     print(
                         "\n🔄 開始一鍵執行全套 Pipeline (從爬蟲到模型訓練)..."
                     )
-                    self.run_race_scraper()
+                    start_y, end_y = self._prompt_year_range()
+                    self.run_race_scraper(start_year=start_y, end_year=end_y)
                     self.run_race_cleaner()
                     if self.check_db_has_races():
                         self.run_horse_scraper()
                         self.run_horse_cleaner()
+                        self.run_trackwork_scraper(start_year=start_y, end_year=end_y)
+                        self.run_trackwork_cleaner()
+                        self.run_trail_scraper(start_year=start_y, end_year=end_y)
+                        self.run_trail_cleaner()
                         self.run_features_pipeline()
                         self.run_model_pipeline()
-                elif choice == "S":
+                elif choice == "14":
                     self.switch_settings()
-                elif choice == "R":
+                elif choice == "15":
                     self.reload_modules()
                 elif choice == "0":
                     print("👋 已退出 CLI 工具。")
@@ -434,11 +522,10 @@ class HKJCCLI:
                     print("❌ 無效選擇，請重新輸入！\n")
 
             except KeyboardInterrupt:
-                # 💡 當使用者按下 Ctrl + C 時捕捉訊號
                 print("\n\n⚠️ 收到使用者中斷指令 (Ctrl+C)！已取消當前執行的動作。")
                 print("🧹 正在清理記憶體並返回主選單...\n")
-                gc.collect()  # 清理可能因中斷產生的孤立物件
-                continue  # 繼續下一次迴圈，重新顯示主選單
+                gc.collect()
+                continue
 
 
 def main():
@@ -458,6 +545,18 @@ def main():
     )
     parser.add_argument(
         "--clean-horses", action="store_true", help="執行馬匹數據清洗"
+    )
+    parser.add_argument(
+        "--scrape-trackwork", action="store_true", help="執行晨操數據爬蟲"
+    )
+    parser.add_argument(
+        "--clean-trackwork", action="store_true", help="執行晨操數據清洗"
+    )
+    parser.add_argument(
+        "--scrape-trails", action="store_true", help="執行試閘數據爬蟲 (Trail Scraper)"
+    )
+    parser.add_argument(
+        "--clean-trails", action="store_true", help="執行試閘數據清洗 (Trail Cleaner)"
     )
     parser.add_argument(
         "--generate-features",
@@ -482,7 +581,7 @@ def main():
     parser.add_argument(
         "--all",
         action="store_true",
-        help="依序執行全套流程 (1 ➔ 2 ➔ 3 ➔ 4 ➔ 5 ➔ 6)",
+        help="依序執行全套流程 (1 ➔ 10)",
     )
 
     parser.add_argument(
@@ -491,10 +590,10 @@ def main():
         help="切換使用的設定檔路徑或檔名 (例: settings_dev.json)",
     )
     parser.add_argument(
-        "--start-date", type=str, help="賽事爬蟲/預測起始日期 (YYYY-MM-DD)"
+        "--start-year", type=int, help="爬蟲起始年份 (YYYY)"
     )
     parser.add_argument(
-        "--end-date", type=str, help="賽事爬蟲結束日期 (YYYY-MM-DD)"
+        "--end-year", type=int, help="爬蟲結束年份 (YYYY)"
     )
     parser.add_argument(
         "--model-type",
@@ -512,7 +611,6 @@ def main():
     args = parser.parse_args()
     cli = HKJCCLI()
 
-    # 如果命令列中傳入了 --config，優先處理設定檔切換
     if args.config:
         cli.switch_settings(args.config)
 
@@ -523,6 +621,10 @@ def main():
             args.clean_races,
             args.scrape_horses,
             args.clean_horses,
+            args.scrape_trackwork,
+            args.clean_trackwork,
+            args.scrape_trails,
+            args.clean_trails,
             args.generate_features,
             args.train_model,
             args.tune_model,
@@ -535,21 +637,24 @@ def main():
 
     # 命令列參數驅動模式
     if args.all:
-        cli.run_race_scraper(
-            start_date=args.start_date, end_date=args.end_date
-        )
+        curr_y = datetime.now().year
+        s_y = args.start_year if args.start_year else curr_y
+        e_y = args.end_year if args.end_year else curr_y
+        cli.run_race_scraper(start_year=s_y, end_year=e_y)
         cli.run_race_cleaner()
         if cli.check_db_has_races():
             cli.run_horse_scraper()
             cli.run_horse_cleaner()
+            cli.run_trackwork_scraper(start_year=s_y, end_year=e_y)
+            cli.run_trackwork_cleaner()
+            cli.run_trail_scraper(start_year=s_y, end_year=e_y)
+            cli.run_trail_cleaner()
             cli.run_features_pipeline()
             cli.run_model_pipeline(model_type=args.model_type)
         return
 
     if args.scrape_races:
-        cli.run_race_scraper(
-            start_date=args.start_date, end_date=args.end_date
-        )
+        cli.run_race_scraper(start_year=args.start_year, end_year=args.end_year)
 
     if args.clean_races:
         cli.run_race_cleaner()
@@ -559,6 +664,18 @@ def main():
 
     if args.clean_horses:
         cli.run_horse_cleaner()
+
+    if args.scrape_trackwork:
+        cli.run_trackwork_scraper(start_year=args.start_year, end_year=args.end_year)
+
+    if args.clean_trackwork:
+        cli.run_trackwork_cleaner()
+
+    if args.scrape_trails:
+        cli.run_trail_scraper(start_year=args.start_year, end_year=args.end_year)
+
+    if args.clean_trails:
+        cli.run_trail_cleaner()
 
     if args.generate_features:
         cli.run_features_pipeline()
@@ -572,7 +689,7 @@ def main():
         cli.run_model_pipeline(model_type=args.model_type)
 
     if args.predict:
-        cli.run_predictions(target_date=args.start_date)
+        cli.run_predictions()
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 *__pycache__/
 *.db
 *.parquet
+*packerignore
 data/
 createFolder.py
 notebooks
@@ -23,7 +24,8 @@ train.py
 models_old/
 config/settings.json
 features/generators/*
-!features/generators/example_generator.py
+!features/generators/_example_generator.py
 !features/generators/__init__.py
+config/*.json
 .active_config
 packed_code.md

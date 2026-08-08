@@ -182,11 +182,9 @@ class ModelPipeline:
         # =========================================================================
         # 💰 [更新] 計算財務指標 (支援平注法或凱利公式動態注碼)
         # =========================================================================
+            
         finance_metrics = {}
         if "win_odds" in val_df_evaluated.columns and "placing" in val_df_evaluated.columns:
-            mode_desc = f"凱利公式 (Fraction: {kelly_fraction})" if use_kelly else "固定平注法"
-            logger.info(f"💵 正在計算驗證集財務回測指標 (Finance Metrics) - 模式: {mode_desc}...")
-            
             fin_results = FinanceMetrics.calculate_betting_performance(
                 df=val_df_evaluated,
                 pred_score_col="pred_score",
@@ -194,19 +192,18 @@ class ModelPipeline:
                 target_placing_col="placing",
                 group_col="race_id",
                 stake=10.0,
-                use_kelly=use_kelly,
-                kelly_fraction=kelly_fraction,
-                initial_bankroll=initial_bankroll,
-                max_stake_pct=max_stake_pct
+                kelly_fraction=1/6,
+                max_stake_pct=0.03,
+                temperature=2.5,
+                min_ev=1.12,
+                use_kelly=True
             )
-            
-            # 將財務指標攤平寫入回傳字典中，方便 Optuna 或日誌追蹤
+
             finance_metrics = {
                 "roi": fin_results["roi"],
                 "net_profit": fin_results["net_profit"],
-                "total_stake": fin_results["total_stake"],
-                "total_return": fin_results["total_return"],
-                "bet_win_rate": fin_results["win_rate"]
+                "total_bets": fin_results["total_bets"],
+                "final_bankroll": fin_results["final_bankroll"],
             }
             # 如果啟用了凱利公式，也可以順便記錄最終資金池結餘
             if use_kelly and "final_bankroll" in fin_results:
@@ -226,21 +223,26 @@ class ModelPipeline:
         return model, metrics
 
     def _get_default_search_space(self, model_name: str) -> Callable[[optuna.Trial], Dict[str, Any]]:
-        """針對不同模型提供預設的 Optuna 超參數尋優空間 (Search Space)"""
+        """針對不同模型提供預設的 Optuna 超參數尋優空間 (Search Space)
         
+        修正重點：
+        1. 強制移除非首馬導向的 'rank:pairwise'，統一使用 'rank:ndcg'
+        2. 將 eval_metric 綁定為 ndcg@3 / ndcg@1，對齊賽馬頭馬預測
+        """
         if model_name == "xgb_ranker":
             def xgb_ranker_space(trial: optuna.Trial) -> Dict[str, Any]:
                 return {
-                    "objective": trial.suggest_categorical("objective", ["rank:pairwise", "rank:ndcg"]),
-                    "eval_metric": "ndcg@5",
+                    # 🔒 強制鎖定 rank:ndcg，避免 pairwise 浪費容量在末段馬匹排序
+                    "objective": "rank:ndcg",
+                    "eval_metric": trial.suggest_categorical("eval_metric", ["ndcg@1", "ndcg@3", "ndcg@5"]),
                     "max_depth": trial.suggest_int("max_depth", 3, 6),
-                    "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.03, log=True),
-                    "n_estimators": trial.suggest_int("n_estimators", 800, 1500, step=100),
-                    "early_stopping_rounds": trial.suggest_int("early_stopping_rounds", 50, 150),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.05, log=True),
+                    "n_estimators": trial.suggest_int("n_estimators", 500, 1500, step=100),
+                    "early_stopping_rounds": trial.suggest_int("early_stopping_rounds", 30, 100),
                     "subsample": trial.suggest_float("subsample", 0.5, 0.8),
                     "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 0.8),
-                    "reg_alpha": trial.suggest_float("reg_alpha", 0.01, 2.0, log=True),
-                    "reg_lambda": trial.suggest_float("reg_lambda", 1.0, 25.0),
+                    "reg_alpha": trial.suggest_float("reg_alpha", 0.01, 5.0, log=True),
+                    "reg_lambda": trial.suggest_float("reg_lambda", 1.0, 30.0),
                     "random_state": 42,
                     "tree_method": "hist",
                     "enable_categorical": True,
@@ -252,6 +254,7 @@ class ModelPipeline:
                 return {
                     "objective": "lambdarank",
                     "metric": "ndcg",
+                    "eval_at": [1, 3],
                     "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.05, log=True),
                     "num_leaves": trial.suggest_int("num_leaves", 15, 63),
                     "max_depth": trial.suggest_int("max_depth", 3, 8),
@@ -269,10 +272,11 @@ class ModelPipeline:
 
     def run_tune_pipeline(
         self,
+        metric_name: str,
         model_name: str = "xgb_ranker",
         n_trials: int = 30,
         val_days: int = 30,
-        metric_name: str = "top1_win_rate",
+        
         direction: str = "maximize",
         feature_cols: Optional[list] = None,
         custom_param_fn: Optional[Callable[[optuna.Trial], Dict[str, Any]]] = None,
