@@ -8,7 +8,7 @@ from database.models.race import Race
 from database.models.result import RaceResult
 from database.models.sectional import RaceSectional
 from database.models.horse import Horse
-from database.models.trail import RaceTrial
+from database.models.trail import RaceTrial, RaceTrialResult
 from database.models.trackwork import RaceTrackwork
 
 __all__: List[str] = [
@@ -19,6 +19,7 @@ __all__: List[str] = [
     "Horse",
     "RaceTrial",
     "RaceTrackwork",
+    "RaceTrailResult"
 ]
 
 

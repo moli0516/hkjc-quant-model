@@ -398,3 +398,123 @@ class ModelPipeline:
             verbose=True,
         )
         return trace_df, is_passed
+
+    def run_walk_forward_evaluation(
+        self,
+        model_name: str = "xgb_ranker",
+        model_params: Optional[Dict[str, Any]] = None,
+        min_train_days: int = 730,
+        step_days: int = 30,
+        overlay_threshold: float = 1.15,
+        feature_cols: Optional[list] = None,
+        run_diagnosis: bool = True,
+        diagnosis_stake: float = 1.0,
+    ) -> dict:
+        """Walk-forward 評估：多段時間正向重訓 + 模型 vs 市場 + 簡單下注 ROI。
+
+        資料需含 date / win_odds / placing；訓練特徵會排除 banned_features 與賠率。
+        run_diagnosis=True 時，對 predictions 再跑大熱 baseline / 賠率畫像 / 分層 / 試閘 residual。
+        """
+        from models.evaluation.walk_forward import WalkForwardEvaluator
+
+        logger.info(
+            "📈 開始 Walk-forward 評估 | model=%s | min_train_days=%d | step_days=%d | overlay=%.2f",
+            model_name,
+            min_train_days,
+            step_days,
+            overlay_threshold,
+        )
+
+        # 1. 載入評估用資料（必須含賠率，才能做市場 baseline 與 ROI）
+        df, default_feature_cols, _ = self.data_loader.load_dataset(
+            include_odds=True
+        )
+
+        if df.empty:
+            raise ValueError("【錯誤】Walk-forward 資料集為空。")
+
+        # 2. 統一日期欄位
+        if "date" not in df.columns:
+            if "race_date" in df.columns:
+                df["date"] = df["race_date"]
+            else:
+                df["date"] = (
+                    df["race_id"]
+                    .astype(str)
+                    .str.extract(r"(\d{4}[/-]\d{2}[/-]\d{2})")[0]
+                )
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df = df.dropna(subset=["date"]).copy()
+        if df.empty:
+            raise ValueError("【錯誤】無法解析任何有效 date，Walk-forward 中止。")
+
+        # 3. 特徵欄位（排除禁用欄位與當場賠率）
+        if feature_cols is None:
+            feature_cols = list(default_feature_cols)
+
+        forbidden_cols = set(getattr(settings, "banned_features", []) or [])
+        forbidden_cols.update({"win_odds", "odds", "placing", "relevance_score"})
+
+        feature_cols = [
+            c for c in feature_cols if c not in forbidden_cols and c in df.columns
+        ]
+        if not feature_cols:
+            raise ValueError("【錯誤】Walk-forward 有效特徵數為 0。")
+        logger.info("Walk-forward 有效特徵數: %d", len(feature_cols))
+
+        # 4. 標籤
+        if "relevance_score" not in df.columns and "placing" in df.columns:
+            df["relevance_score"] = df["placing"].apply(
+                lambda p: max(0, 4 - p) if pd.notna(p) and p <= 3 else 0
+            )
+
+        # 5. 模型參數
+        params = dict(model_params or {})
+
+        # 6. model_factory
+        def _factory(p: Dict[str, Any]):
+            return ModelRegistry.create(name=model_name, model_params=p)
+
+        evaluator = WalkForwardEvaluator(
+            feature_cols=feature_cols,
+            model_params=params,
+            min_train_days=min_train_days,
+            step_days=step_days,
+            date_col="date",
+            race_col="race_id",
+            label_col="placing",
+            odds_col="win_odds",
+            overlay_threshold=overlay_threshold,
+            model_factory=_factory,
+        )
+
+        report = evaluator.evaluate(df)
+        logger.info("✅ Walk-forward 評估完成。")
+
+        # 7. 診斷 1–4（可關）
+        if run_diagnosis:
+            preds = report.get("predictions") if isinstance(report, dict) else None
+            if preds is not None and isinstance(preds, pd.DataFrame) and not preds.empty:
+                report["diagnosis"] = self.run_walk_forward_diagnosis(
+                    predictions=preds,
+                    stake=diagnosis_stake,
+                    print_report=True,
+                )
+            else:
+                logger.warning("⚠️ 無 predictions，跳過 Walk-forward 診斷。")
+                report["diagnosis"] = None
+
+        return report
+
+    def run_walk_forward_diagnosis(
+        self,
+        predictions: pd.DataFrame,
+        stake: float = 1.0,
+        print_report: bool = True,
+    ) -> dict:
+        """對 Walk-forward predictions 執行診斷（大熱 / 賠率畫像 / 分層 / 試閘 residual）。"""
+        from models.evaluation.diagnostics import WalkForwardDiagnostics
+
+        logger.info("🔍 開始 Walk-forward 診斷...")
+        diag = WalkForwardDiagnostics(stake=stake)
+        return diag.run(predictions, print_report=print_report)

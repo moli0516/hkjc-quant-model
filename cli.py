@@ -26,6 +26,7 @@ try:
     # 模型管線與資料載入器匯入
     from models.data_loader import RaceDataLoader
     from models.model_pipeline import ModelPipeline
+    from models.evaluation.diagnostics import WalkForwardDiagnostics
 except ImportError as e:
     print(f"❌ 模組匯入失敗，請確認執行路徑與專案目錄結構: {e}")
     sys.exit(1)
@@ -64,7 +65,7 @@ class HKJCCLI:
     def _prompt_year_range(self) -> tuple[int, int]:
         """互動式詢問爬蟲開始與結束年份，預設為今年"""
         current_year = datetime.now().year
-        
+
         start_in = input(f"請輸入爬蟲開始年份 [預設 {current_year}]: ").strip()
         start_year = int(start_in) if start_in.isdigit() else current_year
 
@@ -72,7 +73,9 @@ class HKJCCLI:
         end_year = int(end_in) if end_in.isdigit() else current_year
 
         if start_year > end_year:
-            print(f"⚠️ 開始年份 ({start_year}) 大於結束年份 ({end_year})，已自動調整為相同年份。")
+            print(
+                f"⚠️ 開始年份 ({start_year}) 大於結束年份 ({end_year})，已自動調整為相同年份。"
+            )
             end_year = start_year
 
         return start_year, end_year
@@ -219,6 +222,7 @@ class HKJCCLI:
         print(f"📅 晨操爬蟲目標年份區間: {start_year} 年 ~ {end_year} 年")
         try:
             from scraper.trackwork_pipeline import TrackworkScrapingPipeline
+
             scraper = TrackworkScrapingPipeline()
             asyncio.run(scraper.run(start_year, end_year))
             print("✅ 晨操數據爬蟲完成！\n")
@@ -246,6 +250,7 @@ class HKJCCLI:
         print(f"📅 試閘爬蟲目標年份區間: {start_year} 年 ~ {end_year} 年")
         try:
             from scraper.trail_pipeline import TrailScrapingPipeline
+
             scraper = TrailScrapingPipeline()
             asyncio.run(scraper.run(start_year, end_year))
             print("✅ 試閘數據爬蟲完成！\n")
@@ -331,7 +336,11 @@ class HKJCCLI:
             print(f"✅ 模型訓練與 {val_days} 天 Out-of-Time 驗證完成！")
             print(f"📊 評估指標詳細結果:")
             for metric_name, val in metrics.items():
-                print(f"   ├─ {metric_name}: {val:.4f}" if isinstance(val, float) else f"   ├─ {metric_name}: {val}")
+                print(
+                    f"   ├─ {metric_name}: {val:.4f}"
+                    if isinstance(val, float)
+                    else f"   ├─ {metric_name}: {val}"
+                )
             print()
             return model, metrics
 
@@ -352,7 +361,9 @@ class HKJCCLI:
 
         try:
             model_pipe = ModelPipeline(db_manager=self.db)
-            print(f"🎯 目標模型: {model_type.upper()} | 嘗試次數: {n_trials} | 優化目標: {metric_name}")
+            print(
+                f"🎯 目標模型: {model_type.upper()} | 嘗試次數: {n_trials} | 優化目標: {metric_name}"
+            )
 
             best_params, best_model = model_pipe.run_tune_pipeline(
                 model_name=model_type,
@@ -395,9 +406,7 @@ class HKJCCLI:
             inference_df, _, _ = data_loader.load_dataset(include_odds=True)
 
             if target_date and "date" in inference_df.columns:
-                inference_df = inference_df[
-                    inference_df["date"] == target_date
-                ]
+                inference_df = inference_df[inference_df["date"] == target_date]
 
             if inference_df.empty:
                 print("⚠️ 找不到符合條件的推論數據，請檢查資料庫狀態。\n")
@@ -425,6 +434,100 @@ class HKJCCLI:
         except Exception as e:
             print(f"❌ 賽事預測執行失敗: {e}\n")
 
+    def run_walk_forward(
+        self,
+        model_type: str = "xgb_ranker",
+        min_train_days: int = 730,
+        step_days: int = 30,
+        overlay_threshold: float = 1.15,
+    ):
+        """[Step 16] Walk-forward 回測：模型 vs 市場 + 簡單下注 ROI"""
+        print("📈 [Step 16] 開始執行：Walk-forward 評估 (Model vs Market)...")
+        if not self.check_db_has_features():
+            return
+
+        try:
+            model_pipe = ModelPipeline(db_manager=self.db)
+            print(
+                f"🎯 模型: {model_type.upper()} | "
+                f"min_train_days={min_train_days} | "
+                f"step_days={step_days} | "
+                f"overlay_threshold={overlay_threshold}"
+            )
+
+            report = model_pipe.run_walk_forward_evaluation(
+                model_name=model_type,
+                min_train_days=min_train_days,
+                step_days=step_days,
+                overlay_threshold=overlay_threshold,
+            )
+
+            if not report:
+                print("⚠️ Walk-forward 未回傳結果。\n")
+                return report
+
+            ranking = report.get("ranking", {}) or {}
+            rule_a = report.get("rule_a", {}) or {}
+            rule_b = report.get("rule_b", {}) or {}
+            rule_c = report.get("rule_c", {}) or {}
+            rule_c_1 = report.get("rule_c_1", {}) or {}
+            rule_d = report.get("rule_d", {}) or {}
+
+            print("\n📊 [排序能力] Model vs Market")
+            print(f"   ├─ model_top1 : {ranking.get('model_top1', float('nan'))}")
+            print(f"   ├─ market_top1: {ranking.get('market_top1', float('nan'))}")
+            print(f"   ├─ model_top3 : {ranking.get('model_top3', float('nan'))}")
+            print(f"   ├─ market_top3: {ranking.get('market_top3', float('nan'))}")
+            print(f"   ├─ n_races    : {ranking.get('n_races', 0)}")
+            print(f"   └─ n_runners  : {ranking.get('n_runners', 0)}")
+
+            print("\n💰 [規則 A] 每場固定下 model_rank==1")
+            print(f"   ├─ n_bets : {rule_a.get('n_bets', 0)}")
+            print(f"   ├─ n_wins : {rule_a.get('n_wins', 0)}")
+            print(f"   ├─ hit_rate: {rule_a.get('hit_rate', float('nan'))}")
+            print(f"   ├─ ROI    : {rule_a.get('roi', float('nan'))}")
+            print(f"   └─ max_dd : {rule_a.get('max_drawdown', float('nan'))}")
+
+            print("\n💰 [規則 B] Overlay 價值下注")
+            print(f"   ├─ n_bets : {rule_b.get('n_bets', 0)}")
+            print(f"   ├─ n_wins : {rule_b.get('n_wins', 0)}")
+            print(f"   ├─ hit_rate: {rule_b.get('hit_rate', float('nan'))}")
+            print(f"   ├─ ROI    : {rule_b.get('roi', float('nan'))}")
+            print(f"   └─ max_dd : {rule_b.get('max_drawdown', float('nan'))}")
+            
+            print("\n💰 [規則 C] 僅當模型第一 == 市場大熱 + 強試閘（同馬）時才下")
+            print(f"   ├─ n_bets : {rule_c.get('n_bets', 0)}")
+            print(f"   ├─ n_wins : {rule_c.get('n_wins', 0)}")
+            print(f"   ├─ hit_rate: {rule_c.get('hit_rate', float('nan'))}")
+            print(f"   ├─ ROI    : {rule_c.get('roi', float('nan'))}")
+            print(f"   └─ max_dd : {rule_c.get('max_drawdown', float('nan'))}")
+            
+            print("\n💰 [規則 C_1] 僅當模型第一 == 市場大熱 + 弱試閘（同馬）時才下")
+            print(f"   ├─ n_bets : {rule_c_1.get('n_bets', 0)}")
+            print(f"   ├─ n_wins : {rule_c_1.get('n_wins', 0)}")
+            print(f"   ├─ hit_rate: {rule_c_1.get('hit_rate', float('nan'))}")
+            print(f"   ├─ ROI    : {rule_c_1.get('roi', float('nan'))}")
+            print(f"   └─ max_dd : {rule_c_1.get('max_drawdown', float('nan'))}")
+
+            print("\n💰 [規則 D] 模型第一，且該馬市場排名 <= 2 才下")
+            print(f"   ├─ n_bets : {rule_d.get('n_bets', 0)}")
+            print(f"   ├─ n_wins : {rule_d.get('n_wins', 0)}")
+            print(f"   ├─ hit_rate: {rule_d.get('hit_rate', float('nan'))}")
+            print(f"   ├─ ROI    : {rule_d.get('roi', float('nan'))}")
+            print(f"   └─ max_dd : {rule_d.get('max_drawdown', float('nan'))}")
+
+            print("\n✅ Walk-forward 評估完成！\n")
+            return report
+
+        except AttributeError as e:
+            print(
+                "❌ ModelPipeline 尚未實作 run_walk_forward_evaluation()。"
+                f" 請先在 models/model_pipeline.py 加入該方法。\n詳細: {e}\n"
+            )
+        except Exception as e:
+            print(f"❌ Walk-forward 評估執行失敗: {e}\n")
+            logger.exception("Walk-forward failed")
+
     # ---------------- 互動式選單 ----------------
     def interactive_menu(self):
         while True:
@@ -449,12 +552,13 @@ class HKJCCLI:
                 print("13. ⚡ 執行一鍵全套 ETL + 特徵工程 + 模型訓練 (1 ➔ 10)")
                 print("14. ⚙️  切換並設定生效 settings.json (Switch Settings)")
                 print("15. 🔄 熱重載所有模組與腳本 (Reload Modules)")
+                print("16. 📈 Walk-forward 回測 (Model vs Market + ROI)")
                 print("0.  退出系統")
                 print("=" * 55)
 
                 choice = (
                     input(
-                        "請選擇要執行的功能編號 (0-15，或按 Ctrl+C 退出): "
+                        "請選擇要執行的功能編號 (0-16，或按 Ctrl+C 退出): "
                     )
                     .strip()
                 )
@@ -505,9 +609,13 @@ class HKJCCLI:
                     if self.check_db_has_races():
                         self.run_horse_scraper()
                         self.run_horse_cleaner()
-                        self.run_trackwork_scraper(start_year=start_y, end_year=end_y)
+                        self.run_trackwork_scraper(
+                            start_year=start_y, end_year=end_y
+                        )
                         self.run_trackwork_cleaner()
-                        self.run_trail_scraper(start_year=start_y, end_year=end_y)
+                        self.run_trail_scraper(
+                            start_year=start_y, end_year=end_y
+                        )
                         self.run_trail_cleaner()
                         self.run_features_pipeline()
                         self.run_model_pipeline()
@@ -515,6 +623,31 @@ class HKJCCLI:
                     self.switch_settings()
                 elif choice == "15":
                     self.reload_modules()
+                elif choice == "16":
+                    min_train_in = input(
+                        "最小訓練天數 min_train_days [預設 730]: "
+                    ).strip()
+                    step_in = input("測試步長 step_days [預設 30]: ").strip()
+                    thr_in = input(
+                        "Overlay 門檻 overlay_threshold [預設 1.15]: "
+                    ).strip()
+
+                    min_train_days = (
+                        int(min_train_in) if min_train_in.isdigit() else 730
+                    )
+                    step_days = int(step_in) if step_in.isdigit() else 30
+                    try:
+                        overlay_threshold = (
+                            float(thr_in) if thr_in else 1.15
+                        )
+                    except ValueError:
+                        overlay_threshold = 1.15
+
+                    self.run_walk_forward(
+                        min_train_days=min_train_days,
+                        step_days=step_days,
+                        overlay_threshold=overlay_threshold,
+                    )
                 elif choice == "0":
                     print("👋 已退出 CLI 工具。")
                     break
@@ -553,10 +686,14 @@ def main():
         "--clean-trackwork", action="store_true", help="執行晨操數據清洗"
     )
     parser.add_argument(
-        "--scrape-trails", action="store_true", help="執行試閘數據爬蟲 (Trail Scraper)"
+        "--scrape-trails",
+        action="store_true",
+        help="執行試閘數據爬蟲 (Trail Scraper)",
     )
     parser.add_argument(
-        "--clean-trails", action="store_true", help="執行試閘數據清洗 (Trail Cleaner)"
+        "--clean-trails",
+        action="store_true",
+        help="執行試閘數據清洗 (Trail Cleaner)",
     )
     parser.add_argument(
         "--generate-features",
@@ -577,6 +714,11 @@ def main():
         "--predict",
         action="store_true",
         help="執行賽事預測 (Inference)",
+    )
+    parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help="執行 Walk-forward 回測 (Model vs Market + ROI)",
     )
     parser.add_argument(
         "--all",
@@ -607,6 +749,24 @@ def main():
         default=30,
         help="Optuna 超參數尋優搜尋試驗次數 (預設: 30)",
     )
+    parser.add_argument(
+        "--min-train-days",
+        type=int,
+        default=730,
+        help="Walk-forward 最小訓練天數 (預設: 730)",
+    )
+    parser.add_argument(
+        "--step-days",
+        type=int,
+        default=30,
+        help="Walk-forward 測試步長天數 (預設: 30)",
+    )
+    parser.add_argument(
+        "--overlay-threshold",
+        type=float,
+        default=1.15,
+        help="Walk-forward Overlay 下注門檻 (預設: 1.15)",
+    )
 
     args = parser.parse_args()
     cli = HKJCCLI()
@@ -629,6 +789,7 @@ def main():
             args.train_model,
             args.tune_model,
             args.predict,
+            args.walk_forward,
             args.all,
         ]
     ):
@@ -666,13 +827,17 @@ def main():
         cli.run_horse_cleaner()
 
     if args.scrape_trackwork:
-        cli.run_trackwork_scraper(start_year=args.start_year, end_year=args.end_year)
+        cli.run_trackwork_scraper(
+            start_year=args.start_year, end_year=args.end_year
+        )
 
     if args.clean_trackwork:
         cli.run_trackwork_cleaner()
 
     if args.scrape_trails:
-        cli.run_trail_scraper(start_year=args.start_year, end_year=args.end_year)
+        cli.run_trail_scraper(
+            start_year=args.start_year, end_year=args.end_year
+        )
 
     if args.clean_trails:
         cli.run_trail_cleaner()
@@ -690,6 +855,14 @@ def main():
 
     if args.predict:
         cli.run_predictions()
+
+    if args.walk_forward:
+        cli.run_walk_forward(
+            model_type=args.model_type,
+            min_train_days=args.min_train_days,
+            step_days=args.step_days,
+            overlay_threshold=args.overlay_threshold,
+        )
 
 
 if __name__ == "__main__":
