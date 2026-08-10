@@ -209,44 +209,36 @@ class WalkForwardEvaluator:
 
     def evaluate(self, df: pd.DataFrame) -> dict:
         preds = self.run(df)
-        print(preds.columns.tolist())
         if preds.empty:
+            empty = self.bettor.summarize(pd.DataFrame())
             return {
                 "ranking": {},
-                "rule_a": self.bettor.summarize(pd.DataFrame()),
-                "rule_b": self.bettor.summarize(pd.DataFrame()),
-                "rule_c": self.bettor.summarize(pd.DataFrame()),
-                "rule_c_1": self.bettor.summarize(pd.DataFrame()),
-                "rule_d": self.bettor.summarize(pd.DataFrame()),
+                "rules": {},
                 "predictions": preds,
             }
 
         ranking = self.metrics.compare(preds)
-        bets_a = self.bettor.rule_a(preds)
-        bets_b = self.bettor.rule_b(preds)
-        bets_c = self.bettor.rule_c_same_pick(preds)
-        bets_c_1 = self.bettor.rule_c_compare(preds)
-        bets_d = self.bettor.rule_d_model1_market_top2(preds)
+        rules_summary = self.bettor.run_many(preds)  # M0/A0/B0/C1/C2/D0
 
         report = {
             "ranking": ranking,
-            "rule_a": self.bettor.summarize(bets_a),
-            "rule_b": self.bettor.summarize(bets_b),
-            "rule_c": self.bettor.summarize(bets_c),
-            "rule_c_1": self.bettor.summarize(bets_c_1),
-            "rule_d": self.bettor.summarize(bets_d),
+            "rules": rules_summary,
             "predictions": preds,
         }
 
+        a0 = rules_summary.get("A0") or {}
+        c1 = rules_summary.get("C1") or {}
+
         logger.info(
             "WF 完成 | model_top1=%.4f market_top1=%.4f | "
-            "rule_a ROI=%.4f (%d bets) | rule_b ROI=%.4f (%d bets)",
+            "A0 hit=%.4f ROI=%.4f n=%d | C1 hit=%.4f ROI=%.4f n=%d",
             ranking.get("model_top1", float("nan")),
             ranking.get("market_top1", float("nan")),
-            report["rule_a"].get("roi", float("nan")),
-            report["rule_a"].get("n_bets", 0),
-            report["rule_b"].get("roi", float("nan")),
-            report["rule_b"].get("n_bets", 0),
-            
+            a0.get("hit_rate", float("nan")),
+            a0.get("roi", float("nan")),
+            a0.get("n_bets", 0),
+            c1.get("hit_rate", float("nan")),
+            c1.get("roi", float("nan")),
+            c1.get("n_bets", 0),
         )
         return report

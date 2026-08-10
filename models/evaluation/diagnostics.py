@@ -1,8 +1,8 @@
-"""Walk-forward 診斷物件：大熱 baseline、賠率畫像、分層、試閘 residual。"""
+"""Walk-forward 診斷物件：大熱 baseline、賠率畫像、分層、試閘 residual、fold 穩定性。"""
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
@@ -15,11 +15,9 @@ class WalkForwardDiagnostics:
 
         diag = WalkForwardDiagnostics(stake=1.0)
         report = diag.run(predictions_df)          # 一鍵 1–4
-        # 或分步：
-        # diag.rule_market_top1(df)
-        # diag.model_top1_odds_profile(df)
-        # diag.stratified_model_vs_market(df)
-        # diag.trial_residual_multi(df)
+        diag.evaluate_h1_stability(predictions_df)  # C1 vs A0
+        diag.evaluate_c3_stability(predictions_df)  # C3 vs A0
+        diag.evaluate_e0_stability(predictions_df)  # E0 vs A0
     """
 
     DEFAULT_ODDS_BINS = [0, 3, 5, 8, 15, 30, np.inf]
@@ -129,6 +127,28 @@ class WalkForwardDiagnostics:
         bets = self._settle_fixed_stake(bets)
         bets["rule"] = rule_name
         return bets
+
+    def _same_pick_base(self, df: pd.DataFrame) -> pd.DataFrame:
+        """model_rank==1 且 market_rank==1 的列（未 groupby）。"""
+        need = [
+            self.race_col,
+            self.model_rank_col,
+            self.market_rank_col,
+            self.odds_col,
+            self.label_col,
+        ]
+        self._ensure_cols(df, need)
+        work = df.dropna(
+            subset=[
+                self.model_rank_col,
+                self.market_rank_col,
+                self.odds_col,
+                self.label_col,
+            ]
+        ).copy()
+        work = work[work[self.odds_col] > 0]
+        mask = (work[self.model_rank_col] == 1) & (work[self.market_rank_col] == 1)
+        return work.loc[mask].copy()
 
     # ------------------------------------------------------------------
     # 1) 大熱 / 模型第一
@@ -410,6 +430,518 @@ class WalkForwardDiagnostics:
         if not parts:
             return pd.DataFrame()
         return pd.concat(parts, ignore_index=True)
+
+    # ------------------------------------------------------------------
+    # 注單建構：A / M / C1 / C3 / E0
+    # ------------------------------------------------------------------
+    def _bets_rule_a(self, df: pd.DataFrame) -> pd.DataFrame:
+        return self._pick_rank1(df, self.model_rank_col, "A0")
+
+    def _bets_rule_m(self, df: pd.DataFrame) -> pd.DataFrame:
+        return self._pick_rank1(df, self.market_rank_col, "M0")
+
+    def _bets_rule_c1(
+        self,
+        df: pd.DataFrame,
+        strong_trial_col: str = "is_strong_trial",
+    ) -> pd.DataFrame:
+        """C1: same_pick + is_strong_trial == 1"""
+        self._ensure_cols(df, [strong_trial_col])
+        work = self._same_pick_base(df)
+        work = work.dropna(subset=[strong_trial_col])
+        bets = work[work[strong_trial_col] == 1].copy()
+        bets = bets.groupby(self.race_col, as_index=False).first()
+        bets = self._settle_fixed_stake(bets)
+        bets["rule"] = "C1"
+        return bets
+
+    def _bets_rule_c3(
+        self,
+        df: pd.DataFrame,
+        fresh_col: str = "is_fresh_trial_7_28d",
+    ) -> pd.DataFrame:
+        """C3: same_pick + is_fresh_trial_7_28d == 1"""
+        self._ensure_cols(df, [fresh_col])
+        work = self._same_pick_base(df)
+        work = work.dropna(subset=[fresh_col])
+        bets = work[work[fresh_col] == 1].copy()
+        bets = bets.groupby(self.race_col, as_index=False).first()
+        bets = self._settle_fixed_stake(bets)
+        bets["rule"] = "C3"
+        return bets
+
+    def _bets_rule_e0(
+        self,
+        df: pd.DataFrame,
+        strong_trial_col: str = "is_strong_trial",
+        fresh_col: str = "is_fresh_trial_7_28d",
+    ) -> pd.DataFrame:
+        """E0: same_pick + strong + fresh"""
+        self._ensure_cols(df, [strong_trial_col, fresh_col])
+        work = self._same_pick_base(df)
+        work = work.dropna(subset=[strong_trial_col, fresh_col])
+        bets = work[
+            (work[strong_trial_col] == 1) & (work[fresh_col] == 1)
+        ].copy()
+        bets = bets.groupby(self.race_col, as_index=False).first()
+        bets = self._settle_fixed_stake(bets)
+        bets["rule"] = "E0"
+        return bets
+
+    # 相容舊名稱
+    def _bets_rule_c(
+        self,
+        df: pd.DataFrame,
+        require_strong_trial: bool = True,
+        strong_trial_col: str = "is_strong_trial",
+    ) -> pd.DataFrame:
+        if require_strong_trial:
+            return self._bets_rule_c1(df, strong_trial_col=strong_trial_col)
+        work = self._same_pick_base(df)
+        bets = work.groupby(self.race_col, as_index=False).first()
+        bets = self._settle_fixed_stake(bets)
+        bets["rule"] = "C0"
+        return bets
+
+    def _summarize_bets_by_fold(
+        self,
+        bets: pd.DataFrame,
+        fold_col: str = "fold_id",
+    ) -> pd.DataFrame:
+        if bets is None or bets.empty:
+            return pd.DataFrame(
+                columns=[
+                    fold_col,
+                    "rule",
+                    "n_bets",
+                    "n_wins",
+                    "hit_rate",
+                    "roi",
+                    "avg_odds",
+                ]
+            )
+        if fold_col not in bets.columns:
+            raise KeyError(
+                f"注單缺少 {fold_col}。請確認 Walk-forward 的 predictions 含 fold_id。"
+            )
+
+        rows = []
+        rule = bets["rule"].iloc[0] if "rule" in bets.columns else "unknown"
+        for fold, g in bets.groupby(fold_col, sort=True):
+            n = len(g)
+            wins = int((g[self.label_col] == 1).sum())
+            stake_sum = float(g["stake"].sum())
+            profit_sum = float(g["profit"].sum())
+            rows.append(
+                {
+                    fold_col: fold,
+                    "rule": rule,
+                    "n_bets": n,
+                    "n_wins": wins,
+                    "hit_rate": float(wins / n) if n else float("nan"),
+                    "roi": float(profit_sum / stake_sum) if stake_sum else float("nan"),
+                    "avg_odds": float(g[self.odds_col].mean()) if n else float("nan"),
+                }
+            )
+        return pd.DataFrame(rows)
+
+    def _attach_fold(
+        self,
+        bets: pd.DataFrame,
+        predictions: pd.DataFrame,
+        fold_col: str = "fold_id",
+    ) -> pd.DataFrame:
+        if bets is None or bets.empty:
+            return bets
+
+        if fold_col in bets.columns and bets[fold_col].notna().all():
+            return bets
+
+        if fold_col not in predictions.columns:
+            raise KeyError(
+                f"predictions 缺少 {fold_col}，無法做跨 fold 分析。"
+            )
+
+        race_fold = (
+            predictions[[self.race_col, fold_col]]
+            .dropna(subset=[self.race_col, fold_col])
+            .drop_duplicates(subset=[self.race_col], keep="first")
+        )
+        out = bets.drop(columns=[fold_col], errors="ignore")
+        out = out.merge(race_fold, on=self.race_col, how="left")
+        if fold_col not in out.columns:
+            raise KeyError(f"merge 後仍無 {fold_col}，請檢查 race_id。")
+        n_miss = int(out[fold_col].isna().sum())
+        if n_miss:
+            raise ValueError(
+                f"有 {n_miss} 注無法對到 {fold_col}，請檢查 predictions。"
+            )
+        return out
+
+    # ------------------------------------------------------------------
+    # 通用 fold 穩定性：treatment vs control（+ 可選 market）
+    # ------------------------------------------------------------------
+    def evaluate_fold_stability(
+        self,
+        predictions: pd.DataFrame,
+        bets_treatment: pd.DataFrame,
+        bets_control: pd.DataFrame,
+        treatment_id: str,
+        control_id: str,
+        bets_market: Optional[pd.DataFrame] = None,
+        fold_col: str = "fold_id",
+        min_n_control: int = 50,
+        min_n_treatment: int = 20,
+        min_frac_folds: float = 2.0 / 3.0,
+        print_report: bool = True,
+        title: Optional[str] = None,
+    ) -> dict:
+        """
+        多數有效 fold 上 treatment.hit > control.hit，
+        且 overall ROI_treatment >= ROI_control → decision=support。
+        """
+        self._ensure_cols(
+            predictions,
+            [
+                self.race_col,
+                self.model_rank_col,
+                self.market_rank_col,
+                self.odds_col,
+                self.label_col,
+                fold_col,
+            ],
+        )
+
+        if bets_market is None:
+            bets_market = self._bets_rule_m(predictions)
+
+        bets_t = self._attach_fold(bets_treatment, predictions, fold_col)
+        bets_c = self._attach_fold(bets_control, predictions, fold_col)
+        bets_m = self._attach_fold(bets_market, predictions, fold_col)
+
+        by_t = self._summarize_bets_by_fold(bets_t, fold_col=fold_col)
+        by_c = self._summarize_bets_by_fold(bets_c, fold_col=fold_col)
+        by_m = self._summarize_bets_by_fold(bets_m, fold_col=fold_col)
+
+        t_prefix, c_prefix = "T", "C"
+        wide = (
+            by_c[[fold_col, "n_bets", "hit_rate", "roi"]]
+            .rename(
+                columns={
+                    "n_bets": f"n_{c_prefix}",
+                    "hit_rate": f"hit_{c_prefix}",
+                    "roi": f"roi_{c_prefix}",
+                }
+            )
+            .merge(
+                by_t[[fold_col, "n_bets", "hit_rate", "roi"]].rename(
+                    columns={
+                        "n_bets": f"n_{t_prefix}",
+                        "hit_rate": f"hit_{t_prefix}",
+                        "roi": f"roi_{t_prefix}",
+                    }
+                ),
+                on=fold_col,
+                how="outer",
+            )
+            .merge(
+                by_m[[fold_col, "n_bets", "hit_rate", "roi"]].rename(
+                    columns={
+                        "n_bets": "n_M",
+                        "hit_rate": "hit_M",
+                        "roi": "roi_M",
+                    }
+                ),
+                on=fold_col,
+                how="outer",
+            )
+            .sort_values(fold_col)
+            .reset_index(drop=True)
+        )
+
+        # 相容 H1 舊欄名：A=control, treatment=C 風格別名
+        wide = wide.rename(
+            columns={
+                f"n_{c_prefix}": "n_control",
+                f"hit_{c_prefix}": "hit_control",
+                f"roi_{c_prefix}": "roi_control",
+                f"n_{t_prefix}": "n_treatment",
+                f"hit_{t_prefix}": "hit_treatment",
+                f"roi_{t_prefix}": "roi_treatment",
+            }
+        )
+        # 亦提供 H1 風格別名（control=A, treatment 當 C）
+        wide["n_A"] = wide["n_control"]
+        wide["hit_A"] = wide["hit_control"]
+        wide["roi_A"] = wide["roi_control"]
+        wide["n_C"] = wide["n_treatment"]
+        wide["hit_C"] = wide["hit_treatment"]
+        wide["roi_C"] = wide["roi_treatment"]
+
+        wide["delta_hit_T_minus_C"] = wide["hit_treatment"] - wide["hit_control"]
+        wide["delta_roi_T_minus_C"] = wide["roi_treatment"] - wide["roi_control"]
+        wide["delta_hit_C_minus_A"] = wide["delta_hit_T_minus_C"]
+        wide["t_beats_c_hit"] = wide["delta_hit_T_minus_C"] > 0
+        wide["c_beats_a_hit"] = wide["t_beats_c_hit"]
+
+        valid = wide[
+            (wide["n_control"].fillna(0) >= min_n_control)
+            & (wide["n_treatment"].fillna(0) >= min_n_treatment)
+        ].copy()
+        n_valid = int(len(valid))
+        frac_hit = float(valid["t_beats_c_hit"].mean()) if n_valid > 0 else float("nan")
+
+        overall_t = self.summarize_bets(bets_t)
+        overall_c = self.summarize_bets(bets_c)
+        overall_m = self.summarize_bets(bets_m)
+
+        roi_ok = overall_t["roi"] >= overall_c["roi"]
+        if n_valid == 0:
+            decision = "evidence_insufficient"
+        elif frac_hit >= min_frac_folds and roi_ok:
+            decision = "support"
+        elif frac_hit >= min_frac_folds and not roi_ok:
+            decision = "weak_support_hit_only"
+        else:
+            decision = "not_supported"
+
+        result = {
+            "decision": decision,
+            "treatment_id": treatment_id,
+            "control_id": control_id,
+            "n_valid_folds": n_valid,
+            "frac_folds_hit_t_gt_c": frac_hit,
+            "frac_folds_hit_c_gt_a": frac_hit,  # H1 相容
+            "min_frac_folds": min_frac_folds,
+            "min_n_control": min_n_control,
+            "min_n_treatment": min_n_treatment,
+            "min_n_a": min_n_control,
+            "min_n_c": min_n_treatment,
+            "overall_treatment": overall_t,
+            "overall_control": overall_c,
+            "overall_market": overall_m,
+            "overall_A": overall_c,
+            "overall_C": overall_t,
+            "overall_M": overall_m,
+            "by_fold": wide,
+            "by_fold_valid": valid,
+        }
+
+        if print_report:
+            self._print_fold_stability_report(
+                result, title=title or f"{treatment_id} vs {control_id}"
+            )
+        return result
+
+    def _print_fold_stability_report(
+        self, result: dict, title: str = ""
+    ) -> None:
+        t_id = result.get("treatment_id", "T")
+        c_id = result.get("control_id", "C")
+        print("\n" + "=" * 60)
+        print(f"📌 Fold 穩定性：{title or (t_id + ' vs ' + c_id)}")
+        print("=" * 60)
+        print(f"   ├─ decision: {result['decision']}")
+        print(f"   ├─ treatment / control: {t_id} / {c_id}")
+        print(f"   ├─ n_valid_folds: {result['n_valid_folds']}")
+        print(
+            f"   ├─ frac_folds (hit_T > hit_C): "
+            f"{result['frac_folds_hit_t_gt_c']}"
+        )
+        print(
+            f"   ├─ threshold: >= {result['min_frac_folds']:.3f} "
+            f"(min_n_control={result['min_n_control']}, "
+            f"min_n_treatment={result['min_n_treatment']})"
+        )
+        print(
+            f"   ├─ overall hit control/treatment/M: "
+            f"{result['overall_control']['hit_rate']:.4f} / "
+            f"{result['overall_treatment']['hit_rate']:.4f} / "
+            f"{result['overall_market']['hit_rate']:.4f}"
+        )
+        print(
+            f"   └─ overall ROI control/treatment/M: "
+            f"{result['overall_control']['roi']:.4f} / "
+            f"{result['overall_treatment']['roi']:.4f} / "
+            f"{result['overall_market']['roi']:.4f}"
+        )
+        print("\n按 fold：")
+        cols = [
+            c
+            for c in [
+                "fold_id",
+                "n_A",
+                "n_C",
+                "n_M",
+                "hit_A",
+                "hit_C",
+                "hit_M",
+                "roi_A",
+                "roi_C",
+                "delta_hit_C_minus_A",
+                "c_beats_a_hit",
+            ]
+            if c in result["by_fold"].columns
+        ]
+        print(result["by_fold"][cols].to_string(index=False))
+        print("=" * 60 + "\n")
+
+    # ------------------------------------------------------------------
+    # 便捷入口：H1 / C3 / E0
+    # ------------------------------------------------------------------
+    def evaluate_h1_stability(
+        self,
+        predictions: pd.DataFrame,
+        fold_col: str = "fold_id",
+        require_strong_trial: bool = True,
+        strong_trial_col: str = "is_strong_trial",
+        min_n_a: int = 50,
+        min_n_c: int = 20,
+        min_frac_folds: float = 2.0 / 3.0,
+        print_report: bool = True,
+    ) -> dict:
+        """H1：C1（同選+強試閘）vs A0。"""
+        bets_a = self._bets_rule_a(predictions)
+        if require_strong_trial:
+            bets_t = self._bets_rule_c1(
+                predictions, strong_trial_col=strong_trial_col
+            )
+            t_id = "C1"
+        else:
+            bets_t = self._bets_rule_c(
+                predictions, require_strong_trial=False
+            )
+            t_id = "C0"
+        result = self.evaluate_fold_stability(
+            predictions,
+            bets_treatment=bets_t,
+            bets_control=bets_a,
+            treatment_id=t_id,
+            control_id="A0",
+            fold_col=fold_col,
+            min_n_control=min_n_a,
+            min_n_treatment=min_n_c,
+            min_frac_folds=min_frac_folds,
+            print_report=print_report,
+            title=f"H1 {t_id} vs A0",
+        )
+        result["require_strong_trial"] = require_strong_trial
+        return result
+
+    def evaluate_c3_stability(
+        self,
+        predictions: pd.DataFrame,
+        fold_col: str = "fold_id",
+        fresh_col: str = "is_fresh_trial_7_28d",
+        control: str = "A0",
+        min_n_control: int = 50,
+        min_n_treatment: int = 20,
+        min_frac_folds: float = 2.0 / 3.0,
+        print_report: bool = True,
+    ) -> dict:
+        """C3（同選+fresh）vs control（預設 A0；可傳 C1）。"""
+        bets_t = self._bets_rule_c3(predictions, fresh_col=fresh_col)
+        if control == "C1":
+            bets_c = self._bets_rule_c1(predictions)
+            c_id = "C1"
+        else:
+            bets_c = self._bets_rule_a(predictions)
+            c_id = "A0"
+        return self.evaluate_fold_stability(
+            predictions,
+            bets_treatment=bets_t,
+            bets_control=bets_c,
+            treatment_id="C3",
+            control_id=c_id,
+            fold_col=fold_col,
+            min_n_control=min_n_control,
+            min_n_treatment=min_n_treatment,
+            min_frac_folds=min_frac_folds,
+            print_report=print_report,
+            title=f"C3 vs {c_id}（fresh trial）",
+        )
+
+    def evaluate_e0_stability(
+        self,
+        predictions: pd.DataFrame,
+        fold_col: str = "fold_id",
+        strong_trial_col: str = "is_strong_trial",
+        fresh_col: str = "is_fresh_trial_7_28d",
+        control: str = "A0",
+        min_n_control: int = 50,
+        min_n_treatment: int = 15,
+        min_frac_folds: float = 2.0 / 3.0,
+        print_report: bool = True,
+    ) -> dict:
+        """E0（同選+strong+fresh）vs control（預設 A0；可傳 C1）。
+
+        預設 min_n_treatment=15（E0 注較少）。
+        """
+        bets_t = self._bets_rule_e0(
+            predictions,
+            strong_trial_col=strong_trial_col,
+            fresh_col=fresh_col,
+        )
+        if control == "C1":
+            bets_c = self._bets_rule_c1(
+                predictions, strong_trial_col=strong_trial_col
+            )
+            c_id = "C1"
+        else:
+            bets_c = self._bets_rule_a(predictions)
+            c_id = "A0"
+        return self.evaluate_fold_stability(
+            predictions,
+            bets_treatment=bets_t,
+            bets_control=bets_c,
+            treatment_id="E0",
+            control_id=c_id,
+            fold_col=fold_col,
+            min_n_control=min_n_control,
+            min_n_treatment=min_n_treatment,
+            min_frac_folds=min_frac_folds,
+            print_report=print_report,
+            title=f"E0 vs {c_id}（strong∧fresh）",
+        )
+
+    def evaluate_all_trial_fold_stability(
+        self,
+        predictions: pd.DataFrame,
+        fold_col: str = "fold_id",
+        print_report: bool = True,
+    ) -> dict:
+        """一次跑 H1(C1)、C3、E0 對 A0 的 fold 穩定性。"""
+        return {
+            "h1_c1_vs_a0": self.evaluate_h1_stability(
+                predictions, fold_col=fold_col, print_report=print_report
+            ),
+            "c3_vs_a0": self.evaluate_c3_stability(
+                predictions, fold_col=fold_col, print_report=print_report
+            ),
+            "e0_vs_a0": self.evaluate_e0_stability(
+                predictions, fold_col=fold_col, print_report=print_report
+            ),
+            "c3_vs_c1": self.evaluate_c3_stability(
+                predictions,
+                fold_col=fold_col,
+                control="C1",
+                print_report=print_report,
+            ),
+            "e0_vs_c1": self.evaluate_e0_stability(
+                predictions,
+                fold_col=fold_col,
+                control="C1",
+                print_report=print_report,
+            ),
+        }
+
+    # 相容舊 print 名稱
+    def _print_h1_report(self, result: dict) -> None:
+        self._print_fold_stability_report(
+            result,
+            title=f"H1 {result.get('treatment_id', 'C')} vs "
+            f"{result.get('control_id', 'A')}",
+        )
 
     # ------------------------------------------------------------------
     # 一鍵入口

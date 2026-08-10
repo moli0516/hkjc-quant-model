@@ -13,6 +13,7 @@ from models.registry import ModelRegistry
 import models.wrappers.xgb_wrapper
 from config.settings import settings
 from models.validation.time_split import TimeSeriesSplitter
+from models.evaluation.prediction_store import PredictionStore
 
 logger = logging.getLogger(__name__)
 
@@ -408,32 +409,41 @@ class ModelPipeline:
         overlay_threshold: float = 1.15,
         feature_cols: Optional[list] = None,
         run_diagnosis: bool = True,
-        diagnosis_stake: float = 1.0,
+        run_h1_stability: bool = True,
+        diagnosis_stake: Optional[float] = None,
+        save_predictions: Optional[bool] = None,
+        predictions_run_id: Optional[str] = None,
     ) -> dict:
-        """Walk-forward 評估：多段時間正向重訓 + 模型 vs 市場 + 簡單下注 ROI。
+        """Walk-forward 評估：多段時間正向重訓 + 模型 vs 市場 + 下注 ROI。
 
-        資料需含 date / win_odds / placing；訓練特徵會排除 banned_features 與賠率。
-        run_diagnosis=True 時，對 predictions 再跑大熱 baseline / 賠率畫像 / 分層 / 試閘 residual。
+        save_predictions 預設讀 settings.auto_save_predictions；
+        為 True 時將 predictions 冷儲存至 settings.predictions_dir。
         """
         from models.evaluation.walk_forward import WalkForwardEvaluator
+        from models.evaluation.prediction_store import PredictionStore
+
+        if diagnosis_stake is None:
+            diagnosis_stake = float(getattr(settings, "diagnosis_stake", 1.0))
+        if save_predictions is None:
+            save_predictions = bool(
+                getattr(settings, "auto_save_predictions", True)
+            )
 
         logger.info(
-            "📈 開始 Walk-forward 評估 | model=%s | min_train_days=%d | step_days=%d | overlay=%.2f",
+            "📈 開始 Walk-forward 評估 | model=%s | min_train_days=%d | "
+            "step_days=%d | overlay=%.2f",
             model_name,
             min_train_days,
             step_days,
             overlay_threshold,
         )
 
-        # 1. 載入評估用資料（必須含賠率，才能做市場 baseline 與 ROI）
         df, default_feature_cols, _ = self.data_loader.load_dataset(
             include_odds=True
         )
-
         if df.empty:
             raise ValueError("【錯誤】Walk-forward 資料集為空。")
 
-        # 2. 統一日期欄位
         if "date" not in df.columns:
             if "race_date" in df.columns:
                 df["date"] = df["race_date"]
@@ -448,13 +458,11 @@ class ModelPipeline:
         if df.empty:
             raise ValueError("【錯誤】無法解析任何有效 date，Walk-forward 中止。")
 
-        # 3. 特徵欄位（排除禁用欄位與當場賠率）
         if feature_cols is None:
             feature_cols = list(default_feature_cols)
 
         forbidden_cols = set(getattr(settings, "banned_features", []) or [])
         forbidden_cols.update({"win_odds", "odds", "placing", "relevance_score"})
-
         feature_cols = [
             c for c in feature_cols if c not in forbidden_cols and c in df.columns
         ]
@@ -462,16 +470,13 @@ class ModelPipeline:
             raise ValueError("【錯誤】Walk-forward 有效特徵數為 0。")
         logger.info("Walk-forward 有效特徵數: %d", len(feature_cols))
 
-        # 4. 標籤
         if "relevance_score" not in df.columns and "placing" in df.columns:
             df["relevance_score"] = df["placing"].apply(
                 lambda p: max(0, 4 - p) if pd.notna(p) and p <= 3 else 0
             )
 
-        # 5. 模型參數
         params = dict(model_params or {})
 
-        # 6. model_factory
         def _factory(p: Dict[str, Any]):
             return ModelRegistry.create(name=model_name, model_params=p)
 
@@ -491,9 +496,40 @@ class ModelPipeline:
         report = evaluator.evaluate(df)
         logger.info("✅ Walk-forward 評估完成。")
 
-        # 7. 診斷 1–4（可關）
+        preds = report.get("predictions") if isinstance(report, dict) else None
+
+        # ---- 冷儲存 ----
+        report["predictions_path"] = None
+        report["predictions_run_id"] = None
+        if (
+            save_predictions
+            and preds is not None
+            and isinstance(preds, pd.DataFrame)
+            and not preds.empty
+        ):
+            store = PredictionStore(
+                file_format=getattr(settings, "predictions_format", "parquet")
+            )
+            meta = {
+                "model_name": model_name,
+                "min_train_days": min_train_days,
+                "step_days": step_days,
+                "overlay_threshold": overlay_threshold,
+                "n_features": len(feature_cols),
+                "feature_cols": feature_cols,
+                "date_min": str(df["date"].min().date()),
+                "date_max": str(df["date"].max().date()),
+                "ranking": report.get("ranking"),
+            }
+            run_dir = store.save(
+                preds, meta=meta, run_id=predictions_run_id
+            )
+            report["predictions_path"] = str(run_dir)
+            report["predictions_run_id"] = run_dir.name
+            logger.info("💾 predictions 已儲存: %s", run_dir)
+
+        # ---- 診斷 ----
         if run_diagnosis:
-            preds = report.get("predictions") if isinstance(report, dict) else None
             if preds is not None and isinstance(preds, pd.DataFrame) and not preds.empty:
                 report["diagnosis"] = self.run_walk_forward_diagnosis(
                     predictions=preds,
@@ -504,6 +540,109 @@ class ModelPipeline:
                 logger.warning("⚠️ 無 predictions，跳過 Walk-forward 診斷。")
                 report["diagnosis"] = None
 
+        if run_h1_stability:
+            if preds is not None and isinstance(preds, pd.DataFrame) and not preds.empty:
+                from models.evaluation.diagnostics import WalkForwardDiagnostics
+
+                report["h1_stability"] = WalkForwardDiagnostics(
+                    stake=diagnosis_stake
+                ).evaluate_h1_stability(
+                    preds,
+                    fold_col="fold_id",
+                    require_strong_trial=True,
+                    print_report=True,
+                )
+            else:
+                logger.warning("⚠️ 無 predictions，跳過 H1 穩定性。")
+                report["h1_stability"] = None
+
+        return report
+
+    def run_offline_evaluation(
+        self,
+        run_id: Optional[str] = None,
+        path: Optional[str] = None,
+        overlay_threshold: float = 1.15,
+        run_diagnosis: bool = True,
+        run_h1_stability: bool = True,
+        diagnosis_stake: Optional[float] = None,
+        list_only: bool = False,
+    ) -> dict:
+        """從冷儲存載入 predictions，重跑規則 / 診斷 / H1（不重訓）。
+
+        Parameters
+        ----------
+        run_id : 指定 run 名稱，例如 wf_20260810_190512
+        path : 指定 run 目錄或檔案路徑
+        list_only : 只列出可用 run，不評估
+        """
+        from models.evaluation.prediction_store import PredictionStore
+        from models.evaluation.betting import BetEvaluator
+        from models.evaluation.metrics_ext import RankingMetrics
+
+        if diagnosis_stake is None:
+            diagnosis_stake = float(getattr(settings, "diagnosis_stake", 1.0))
+
+        store = PredictionStore(
+            file_format=getattr(settings, "predictions_format", "parquet")
+        )
+
+        if list_only:
+            store.print_runs()
+            return {"runs": store.list_runs()}
+
+        preds, meta = store.load(run_id=run_id, path=path)
+        logger.info(
+            "📂 離線評估載入 run=%s | rows=%d | meta.model=%s",
+            meta.get("run_id"),
+            len(preds),
+            (meta.get("meta") or {}).get("model_name"),
+        )
+
+        # 必要欄位檢查
+        required = {"race_id", "model_rank", "market_rank", "win_odds", "placing"}
+        missing = required - set(preds.columns)
+        if missing:
+            raise KeyError(f"冷儲存 predictions 缺少欄位: {sorted(missing)}")
+
+        metrics = RankingMetrics(race_col="race_id", label_col="placing")
+        bettor = BetEvaluator(
+            overlay_threshold=overlay_threshold,
+            race_col="race_id",
+            odds_col="win_odds",
+            label_col="placing",
+        )
+
+        ranking = metrics.compare(preds)
+        rules_summary = bettor.run_many(preds)
+        report = {
+            "source": "offline_store",
+            "run_id": meta.get("run_id"),
+            "store_meta": meta,
+            "ranking": ranking,
+            "rules": rules_summary,
+            "predictions": preds,
+        }
+
+        if run_diagnosis:
+            report["diagnosis"] = self.run_walk_forward_diagnosis(
+                predictions=preds,
+                stake=diagnosis_stake,
+                print_report=True,
+            )
+
+        if run_h1_stability and "fold_id" in preds.columns:
+            from models.evaluation.diagnostics import WalkForwardDiagnostics
+
+            diag = WalkForwardDiagnostics(stake=diagnosis_stake)
+            report["h1"] = diag.evaluate_h1_stability(preds)
+            report["c3_stability"] = diag.evaluate_c3_stability(preds)
+            report["e0_stability"] = diag.evaluate_e0_stability(preds)
+        elif run_h1_stability:
+            logger.warning("⚠️ predictions 無 fold_id，跳過 H1。")
+            report["h1_stability"] = None
+
+        logger.info("✅ 離線評估完成 | run=%s", meta.get("run_id"))
         return report
 
     def run_walk_forward_diagnosis(

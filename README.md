@@ -1,89 +1,75 @@
+
 # 🏇 HKJC Racing Quant: End-to-End ETL & Quantitative Machine Learning Pipeline
 
-An industrial-grade, end-to-end quantitative data engineering and machine learning system tailored specifically for Hong Kong Jockey Club (HKJC) horse racing analytics. The platform spans the entire data lifecycle: asynchronous web scraping, clean relational database storage, temporal leakage-proof feature engineering, out-of-time (OOT) model training, Optuna hyperparameter optimization, and real-world financial backtesting via Kelly Criterion betting strategies.
+An industrial-grade, end-to-end quantitative data engineering and machine learning system tailored for Hong Kong Jockey Club (HKJC) horse racing analytics. The platform spans the full data lifecycle: asynchronous web scraping, relational storage, temporal leakage-proof feature engineering, out-of-time (OOT) ranking models, Optuna hyperparameter search, expanding-window **walk-forward** evaluation, and fixed-stake research backtests against an explicit **market-favorite baseline**.
+
+This repository is a **research and engineering** system. It is not a tip sheet or live betting bot. Empirical walk-forward results on the current feature set show **no stable positive unit-stake win ROI** under the tested policies. Selective agreement with the tote favorite (optionally filtered by barrier-trial flags) can **reduce losses and drawdown** relative to always backing the model top pick—that is a relative finding, not a claim of economic edge.
 
 ---
 
 ## 🏗️ System Architecture & Codebase Map
 
-The project adheres to a modular design separating scraping, cleaning, feature generation, model execution, and evaluation:
+The project uses a modular layout: scrape → clean → features → model → evaluate.
 
 ```text
 ./
-├── cleaners/                    # Data Cleaning & Schema Normalization Pipeline
-│   ├── cleaner_pipeline.py      # Main Cleaning Manager
-│   ├── horses_cleaner.py        # Horse Profiles Parser & Normalizer
-│   ├── races_cleaner.py         # Race & Results Cleaner
-│   ├── sectional_cleaner.py     # Sectional Times & Positions Cleaner
-│   ├── trackwork_cleaner.py     # Trackwork & Morning Gallops Cleaner
-│   └── trails_cleaner.py        # Barrier Trials Metadata & Results Cleaner
-├── config/                      # Configuration Management
-│   ├── .active_config           # Persistent pointer to the active settings JSON
-│   ├── settings.py              # Dynamic Settings Proxy Loader
-│   ├── settings.json            # Base system & XGBoost hyperparameters
-│   └── settings_roi.json        # ROI-optimized financial settings profile
-├── database/                    # Relational Database Infrastructure
-│   ├── models/                  # SQLAlchemy ORM Data Models
-│   └── db_manager.py            # SQLite Connection Manager, Indexing, & Queries
-├── features/                    # Feature Engineering Architecture
-│   ├── generators/              # Dynamic Feature Generator Plugins
-│   │   ├── _example_generator.py# Dummy Data Generator for CI/CD Testing
-│   │   ├── body_weight_recovery.py
-│   │   ├── class_performance.py
-│   │   ├── context_relative.py  # Race-level z-scores, odds ranks & weights
-│   │   ├── horse_profile.py     # Horse tenure & HK residency features
-│   │   ├── horse_rolling.py     # Shifted rolling performance metrics
-│   │   ├── human_sire.py        # Jockey/Trainer/Sire historical statistics
-│   │   ├── injury_rest.py       # Rest days & layoff indicator features
-│   │   ├── interaction.py       # Cross-feature interactions & ratios
-│   │   ├── jockey_trainer_alpha.py
-│   │   ├── jockey_trainer_synergy.py
-│   │   ├── jt_recent_form.py
-│   │   ├── odds_market.py       # Market implied probability & favorite flags
-│   │   ├── pace_strategy.py     # Early pace & front-runner competition
-│   │   ├── rating_class.py      # Rating class changes & drops
-│   │   ├── ratinn_momentum.py   # Rating momentum & race-level advantages
-│   │   ├── sectional_brust.py   # Late sectional burst ratios
-│   │   ├── sectional_speed.py   # Sectional speeds & position gains
-│   │   ├── speed_feature.py     # Speed z-scores & pace expenditure
-│   │   ├── synergy_fitness.py   # Jockey switch & human-horse pairing stats
-│   │   ├── track_distance.py    # Track/Distance specific win rates
-│   │   ├── trackwork_feature.py # Trackwork activity & fast-work counts
-│   │   └── trail_feature.py     # Barrier trial forms, pass flags & comments
-│   ├── utils/                   # Feature Utilities
-│   │   ├── leak_guard.py        # Automated Data Leakage Validation
-│   │   ├── scale.py             # Race-level Scalers & Z-score Calculators
-│   │   ├── smoother.py          # Bayesian Smoothers & Shifted Rolling Stats
-│   │   ├── time_calc.py         # Speed (m/s) & Distance Normalization
-│   │   └── track_bias.py        # Track Type & Draw Category Encoders
-│   ├── base_target.py           # Base DataFrame Skeleton & Target Generator
-│   └── feature_pipeline.py      # Sequential Zero-Copy Feature Engine
-├── models/                      # Machine Learning & Quantitative Modeling
-│   ├── hyperopt/                # Hyperparameter Tuning Engine
-│   │   └── optuna_tuner.py      # Optuna Objective Wrappers & Tuner
-│   ├── metrics/                 # Quantitative & Financial Evaluation
-│   │   ├── calibration.py       # Odds-Aware Logistic Probability Calibrator
-│   │   ├── finance.py           # Kelly Criterion, EV, & ROI Backtesting Engine
-│   │   └── ranking.py           # Top-K Win Rates & Mean NDCG@K Metrics
-│   ├── validation/              # Strict Temporal Validation & Audit
-│   │   ├── micro_tracing.py     # Horse-level Micro-Tracer for Leakage Audit
-│   │   └── time_split.py        # Out-Of-Time (OOT) Time-Series Splitter
-│   ├── wrappers/                # Model Architecture Wrappers
-│   │   └── xgb_wrapper.py       # XGBRanker Wrapper
-│   ├── base_model.py            # Abstract Base Model Class
-│   ├── data_loader.py           # Strict No-Odds Data Loader Engine
-│   ├── model_pipeline.py        # End-to-End Model Execution & Inference Pipeline
-│   └── registry.py              # Dynamic Model Factory & Registry
-├── scraper/                     # Asynchronous Web Crawling System
-│   ├── parser/                  # Selectolax Fast HTML/JSON Parsers
-│   ├── hook.py                  # Aiohttp Async Session & Request Hook
-│   ├── race_pipeline.py         # Async Race Results Crawler
-│   ├── horse_pipeline.py        # Async Horse Profiles Crawler
-│   ├── trackwork_pipeline.py    # Async Trackwork JSON API Crawler
-│   └── trail_pipeline.py        # Async Barrier Trials Crawler
-└── cli.py                       # Unified CLI Command-Line Interface
-
+├── cleaners/                       # Data cleaning & schema normalization
+│   ├── cleaner_pipeline.py
+│   ├── horses_cleaner.py
+│   ├── races_cleaner.py
+│   ├── sectional_cleaner.py
+│   ├── trackwork_cleaner.py
+│   └── trails_cleaner.py
+├── config/                         # Configuration management
+│   ├── .active_config
+│   ├── settings.py
+│   ├── settings.example.json
+│   ├── settings.json
+│   └── settings_roi.json
+├── database/                       # Relational infrastructure
+│   ├── models/                     # SQLAlchemy ORM
+│   └── db_manager.py               # Connection, indexes, merged race load
+├── features/                       # Feature engineering
+│   ├── generators/                 # Plugin generators (EXECUTION_ORDER)
+│   ├── utils/                      # leak_guard, smoother, scale, time_calc, …
+│   ├── base_target.py
+│   └── feature_pipeline.py
+├── models/                         # ML, validation, quantitative evaluation
+│   ├── evaluation/
+│   │   ├── rules/                  # BettingRule registry (M0/A0/C1/…)
+│   │   ├── walk_forward.py         # Expanding-window walk-forward
+│   │   ├── diagnostics.py          # Market baseline, strata, fold stability
+│   │   ├── betting.py              # Fixed-stake rule execution (run_many)
+│   │   ├── prediction_store.py     # Cold-store predictions (parquet + meta)
+│   │   ├── baselines.py
+│   │   └── metrics_ext.py
+│   ├── hyperopt/
+│   │   └── optuna_tuner.py
+│   ├── metrics/
+│   │   ├── calibration.py
+│   │   ├── finance.py              # EV / ROI / optional Kelly-style summaries
+│   │   └── ranking.py
+│   ├── validation/
+│   │   ├── micro_tracing.py
+│   │   └── time_split.py
+│   ├── wrappers/
+│   │   └── xgb_wrapper.py
+│   ├── base_model.py
+│   ├── data_loader.py
+│   ├── model_pipeline.py
+│   └── registry.py
+├── scraper/                        # Async crawling
+│   ├── parser/
+│   ├── hook.py
+│   ├── race_pipeline.py
+│   ├── horse_pipeline.py
+│   ├── trackwork_pipeline.py
+│   └── trail_pipeline.py
+├── cli.py                          # Unified CLI
+└── start.bat                       # Windows launcher (process-level reload)
 ```
+
+Modeling-layer narrative: see [`models/README.md`](models/README.md) when present.
 
 ---
 
@@ -91,162 +77,214 @@ The project adheres to a modular design separating scraping, cleaning, feature g
 
 ### 1. Requirements & Setup
 
-Ensure you have Python 3.10 or higher installed. Clone the repository and initialize a virtual environment:
+Python 3.10+ recommended.
 
 ```bash
-# Clone the repository
 git clone <repository_url>
-cd hkjc-racing-quant
+cd hkjc-quant-model   # or your local folder name
 
-# Create and activate virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Windows: .venv\Scripts\activate
+# Unix:    source .venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
-
 ```
 
 ### 2. Infrastructure Initialization
 
-The system automatically resolves data and database paths specified in `config/settings.json`. Executing any command via `cli.py` will automatically initialize directory structures (`data/raw_json/`, `data/cleaned_json/`) and build the SQLite relational database schema (`hkjc_racing.db`).
+Paths are resolved from `config/settings.json` (see `settings.example.json`). Running `cli.py` initializes data directories and the SQLite schema as needed. Do not commit local `*.db`, full `data/`, or secret-bearing settings (see `.gitignore`).
 
 ---
 
 ## 🔄 End-to-End Data Lifecycle
 
-Data moves strictly through three fully decoupled stages:
-
 ```text
-[ Raw Web / API ] 
+[ HKJC Web / API ]
        │
-       ▼ (Scraper Engine: aiohttp + selectolax)
-[ Raw JSON Storage ] ──> (data/raw_json/races, horses, trackworks, trails)
+       ▼  scraper (aiohttp + selectolax)
+[ Raw JSON ]  ── data/raw_json/…
        │
-       ▼ (Cleaners & DBManager: Pandas + SQLAlchemy)
-[ SQLite Relational DB ] ──> (Tables: races, race_results, horses, race_trackwork, trials)
+       ▼  cleaners + DBManager
+[ SQLite ]  ── races, race_results, sectionals, horses, trackwork, trails, trail_results
        │
-       ▼ (BaseTargetBuilder + FeaturesPipeline: Bayesian Smoother + Shift Guard)
-[ feature_matrix Table ] ──> (Strictly time-sorted, zero future leakage)
+       ▼  load_all_merged_race_data (time-safe trial/trackwork context)
+[ Race panel ]
        │
-       ▼ (ModelPipeline + XGBRanker: OOT Time Split)
-[ Trained Model & Predictions ] ──> (NDCG@K, Top-1 Win Rate, Kelly ROI Backtest)
-
+       ▼  FeaturesPipeline (Bayesian smoothers + shift guards)
+[ feature_matrix ]
+       │
+       ▼  RaceDataLoader (odds / results banned from X at fit)
+[ Train / eval frames ]
+       │
+       ▼  ModelPipeline + XGBRanker
+[ OOT train / Optuna / inference ]
+       │
+       ▼  WalkForwardEvaluator
+[ Predictions + fold_id ]
+       ├── RankingMetrics          model vs market top-K
+       ├── WalkForwardDiagnostics  odds profile, strata, trial residual, fold stability
+       ├── BetEvaluator + rules/   fixed-stake policies → report["rules"]
+       └── PredictionStore         data/predictions/<run_id>/  (offline re-eval)
 ```
 
-1. **Ingestion (Raw Crawling)**:
-   The `scraper` module asynchronously fetches race cards, results, sectional times, horse profiles, morning trackwork, and barrier trials from HKJC servers, storing them as raw JSON documents.
-2. **ETL & Normalization**:
-   The `cleaners` module parses raw JSON files, performs type conversion, handles non-finishing codes (`WV`, `DNF`, `DISQ`), extracts numerical margins, and persists structured records into SQLite tables via SQLAlchemy ORM.
-3. **Feature Engineering**:
-   `FeaturesPipeline` executes dynamic feature generators ordered by `EXECUTION_ORDER`. All historical calculations rely on Bayesian smoothing and explicit `.shift(1)` operations to prevent post-race data leakage. The output is persisted into the `feature_matrix` database table.
-4. **Model Training & Financial Backtesting**:
-   `RaceDataLoader` streams the feature matrix while strictly stripping out odds features during training to prevent the ranking model from over-fitting to market consensus. Model predictions are evaluated using ranking metrics (`NDCG@K`, `Top-1 Win Rate`) and passed to `FinanceMetrics` for real-world Expected Value (EV) and Kelly Criterion backtesting.
+1. **Ingestion** — Async crawl of results, sectionals, horses, trackwork, barrier trials → raw JSON.  
+2. **ETL** — Cleaners normalize types, non-finishers, margins; persist via SQLAlchemy.  
+3. **Features** — Generators run in `EXECUTION_ORDER` with explicit anti-leakage shifts; output → `feature_matrix`.  
+4. **Model** — Ranker trains without contemporaneous odds in `feature_cols`.  
+5. **Evaluation** — Calendar OOT and expanding walk-forward; always report **market baseline**; research rules use **unit stakes** for comparability. Optional Kelly-style sizing lives in `FinanceMetrics` for methodology experiments, not as a claim of live edge.
 
 ---
 
-## 🛠️ Command-Line Interface (`cli.py`) Usage
+## 🛠️ Command-Line Interface (`cli.py`)
 
-`cli.py` is the mainentry point for executing scrapers, cleaning pipelines, feature generation, hyperparameter tuning, and inference.
-
-### Mode 1: Interactive Menu (Zero Arguments)
-
-Launch the interactive text menu by executing `cli.py` without flags:
+### Mode 1: Interactive menu
 
 ```bash
 python cli.py
-
+# or: start.bat
 ```
 
-```text
-==================================================
-🏇 HKJC Racing Quant Engine & Machine Learning CLI (Config: settings.json)
-==================================================
-1.  Run Race & Sectional Scraper
-2.  Run Race & Sectional Data Cleaner
-3.  Run Horse Profile Scraper (Requires Race DB)
-4.  Run Horse Profile Data Cleaner
-5.  Run Trackwork Scraper
-6.  Run Trackwork Data Cleaner
-7.  Run Barrier Trial Scraper
-8.  Run Barrier Trial Data Cleaner
-9.  ⚙️  Generate Quant Feature Matrix (Features Pipeline)
-10. 🤖 Train Racing Model (Model Pipeline)
-11. 🎯 Optuna Hyperparameter Optimization (Model Tuning)
-12. 🔮 Run Race Inference / Predictions
-13. ⚡ Run One-Key Full Pipeline (Steps 1 ➔ 10)
-14. ⚙️  Switch Active Settings Configuration
-15. 🔄 Hot-Reload All Modules & Generators
-0.  Exit
-==================================================
-Please select an option (0-15):
+Typical menu (labels may vary slightly by build):
 
-```
+| Step | Action |
+|------|--------|
+| 1–2 | Race & sectional scrape / clean |
+| 3–4 | Horse scrape / clean |
+| 5–6 | Trackwork scrape / clean |
+| 7–8 | Barrier trial scrape / clean |
+| 9 | Feature matrix pipeline |
+| 10 | Train model (OOT window) |
+| 11 | Optuna hyperparameter search |
+| 12 | Inference / predictions |
+| 13 | One-key pipeline (when wired) |
+| **14** | Walk-forward evaluation (+ diagnosis, optional prediction dump) |
+| **15** | Offline evaluation from cold-stored predictions |
+| **R** | Hot-reload project modules |
+| **S** | Switch active settings JSON |
+| 0 | Exit |
 
-* **Hot-Reload (`15`)**: Dynamically reloads Python modules and feature generators in memory without restarting the CLI session.
+After editing `models/`, prefer a **full process restart** (`start.bat` **R** or relaunch) so offline evaluation does not use stale bytecode.
 
----
+### Mode 2: CLI flags (scheduling / automation)
 
-### Mode 2: Automated CLI Arguments
+| Argument | Description |
+|----------|-------------|
+| `--scrape-races` / `--clean-races` | Race & sectional crawl / clean |
+| `--scrape-horses` / `--clean-horses` | Horse profiles |
+| `--scrape-trackwork` / `--clean-trackwork` | Morning trackwork |
+| `--scrape-trails` / `--clean-trails` | Barrier trials |
+| `--generate-features` | Full feature matrix |
+| `--train-model` | OOT train |
+| `--tune-model` | Optuna search |
+| `--predict` | Inference |
+| `--walk-forward` | Expanding walk-forward (when exposed) |
+| `--eval-store` | Offline eval from `PredictionStore` |
+| `--all` | End-to-end through train (as implemented) |
+| `--config` | Switch settings profile |
+| `--start-year` / `--end-year` | Crawl year range |
+| `--model-type` | Default `xgb_ranker` |
+| `--n-trials` | Optuna trials |
 
-Integrate tasks into scheduling systems (e.g., Airflow, Cron) by passing explicit arguments:
-
-#### Command-Line Arguments Reference:
-
-
-| Argument         | Type | Default | Description                                        |
-| ---------------- | ---- | ------- | -------------------------------------------------- |
-| `--scrape-races` | Flag | `False` | Triggers race results and sectional times crawler. ||
-| `--clean-races` | Flag | `False` | Cleans raw race/sectional JSON files into SQLite.|
-| `--scrape-horses` | Flag | `False` | Crawls missing horse profiles based on DB gaps.|
-| `--clean-horses` | Flag | `False` | Cleans horse profile JSONs and updates `horses` table.|
-| `--scrape-trackwork` | Flag | `False` | Crawls morning trackwork records for date ranges. |
-| `--clean-trackwork` | Flag | `False` | Cleans raw trackwork JSONs into `race_trackwork`. |
-| `--scrape-trails` | Flag | `False` | Crawls barrier trial results and metadata. |
-| `--clean-trails` | Flag | `False` | Cleans trial JSONs into `trials` and `trial_results`. |
-| `--generate-features` | Flag | `False` | Generates full time-sorted feature matrix into SQLite.|
-| `--train-model` | Flag | `False` | Trains specified model model with OOT validation.|
-| `--tune-model` | Flag | `False` | Runs Optuna hyperparameter optimization.|
-| `--predict` | Flag | `False` | Performs inference for upcoming or target race dates.|
-| `--all` | Flag | `False` | Runs complete end-to-end pipeline from scraping to training.|
-| `--config` | Option | `None` | Switches active configuration JSON (e.g., `settings_roi.json`). |
-| `--start-year` | Option | Current | Start year for date-range crawlers (YYYY).|
-| `--end-year` | Option | Current | End year for date-range crawlers (YYYY).|
-| `--model-type` | Option | `xgb_ranker` | Ranking architecture (`xgb_ranker`, `lgb_ranker`).|
-| `--n-trials` | Option | `30` | Number of Optuna hyperopt trials.|
-
----
-
-### CLI Command Examples
-
-**1. Run Complete Ingestion, Feature Pipeline, & Model Training for 2025–2026:**
+Examples:
 
 ```bash
 python cli.py --all --start-year 2025 --end-year 2026 --model-type xgb_ranker
-
-```
-
-**2. Generate Feature Matrix & Perform Hyperparameter Optimization:**
-
-```bash
-python cli.py --generate-features --tune-model --n-trials 50 --model-type xgb_ranker
-
-```
-
-**3. Run Inference for Upcoming Races using Custom ROI Settings Profile:**
-
-```bash
+python cli.py --generate-features --tune-model --n-trials 50
 python cli.py --config settings_roi.json --predict
+```
 
+### Library-style
+
+```python
+from database.db_manager import DBManager
+from models.model_pipeline import ModelPipeline
+
+pipe = ModelPipeline(db_manager=DBManager())
+model, metrics = pipe.run_train_pipeline(model_name="xgb_ranker", val_days=90)
+
+report = pipe.run_walk_forward_evaluation(
+    model_name="xgb_ranker",
+    min_train_days=730,
+    step_days=30,
+    run_diagnosis=True,
+)
+
+report = pipe.run_offline_evaluation(run_id="wf_YYYYMMDD_HHMMSS")
+# report["ranking"], report["rules"], report["diagnosis"], …
 ```
 
 ---
 
-## 🔒 Quantitative Integrity & Leakage Prevention Rules
+## 📏 Evaluation layer (research)
 
-1. **No Post-Race Data Leakage**:
-   Current-race finishing statistics (e.g., `finish_time_sec`, `sec1_time`..`sec6_time`, `margin_len`, `placing`) are strictly isolated. All historical aggregations (running position averages, speed ratios, win rates) apply an explicit `.shift(1)` step via `BayesianSmoother`.
-2. **Train/Val vs. Financial Pipeline Separation**:
-   Model training datasets generated by `RaceDataLoader` strictly ban market odds features (`win_odds`, `implied_prob_share`, `odds_race_zscore`) to force the ranker to learn fundamental racing mechanics rather than market consensus. Market odds are attached exclusively during financial evaluation (`FinanceMetrics`) to compute Expected Value (EV) and fractional Kelly Criterion bet sizes.
-3. **Micro-Tracing Leakage Audit**:
-   `ModelPipeline` automatically triggers `HorseMicroTracer` validation prior to training, auditing row-by-row time-series progression for individual horses to verify that no race $N$ outcome leaks into race $N$ features.
+| Component | Role |
+|-----------|------|
+| `WalkForwardEvaluator` | Expanding train window; step test origin by `step_days` |
+| `RankingMetrics` | Model top-1 / top-3 vs market favorite |
+| `WalkForwardDiagnostics` | M vs A, odds bins, agree/disagree strata, trial residual, **fold stability** |
+| `BetEvaluator` + `evaluation/rules/` | Registered fixed-stake policies (`run_many` → `report["rules"]`) |
+| `PredictionStore` | Parquet predictions + meta for offline re-runs without retraining |
+
+### Research rules (`rule_id`)
+
+| ID | Concept |
+|----|---------|
+| **M0** | Market rank == 1 |
+| **A0** | Model rank == 1 |
+| **B0** | Overlay / value-style filter on scores |
+| **C1** | Same pick (model ∩ market top-1) **and** strong barrier trial |
+| **C2** | Same pick **and** non-strong trial (contrast) |
+| **C3** | Same pick **and** fresh trial window |
+| **C4** | Same pick **and** not fresh (contrast) |
+| **D0** | Model rank 1 **and** market rank ≤ 2 |
+| **E0** | Same pick **and** strong **and** fresh |
+
+Unit stakes only. ROI and drawdown are methodology scores under HKJC-style win pricing—not staking advice.
+
+**Illustrative baseline** (research log): model top-1 hit ≈ 0.25 vs market ≈ 0.31; no tested rule showed stable positive ROI. **C1** improved hit and reduced loss vs **A0** with strong fold-level support; stacking **E0** raised hit further but did not improve ROI over **C1**.
+
+---
+
+## 🔒 Quantitative Integrity & Leakage Prevention
+
+1. **No post-race leakage in features**  
+   Current-race finish stats (`finish_time_sec`, sectionals, `margin_len`, `placing`, …) are not used as covariates for the same race. Historical aggregates use Bayesian smoothers and explicit `.shift(1)` (and related guards) in `features/`.
+
+2. **Train vs financial / market separation**  
+   `RaceDataLoader` excludes banned columns and live odds fields from training `feature_cols` so the ranker is not trained to copy the tote. `win_odds` / `market_rank` attach at **evaluation** for baselines and unit-stake (or optional Kelly-style) research summaries.
+
+3. **Micro-tracing audit**  
+   Optional `HorseMicroTracer` checks that rolling features do not absorb the same race’s outcome for the same horse before train.
+
+4. **Time-safe external context**  
+   Barrier-trial and trackwork joins in `load_all_merged_race_data` enforce work/trial **before** race day (normalized date formats).
+
+5. **Honest metrics**  
+   Report ranking quality **and** fixed-stake ROI / max drawdown; keep market baselines side-by-side.
+
+---
+
+## 🎯 Design goals (summary)
+
+1. End-to-end path with one CLI entry.  
+2. Temporal integrity by default (OOT + walk-forward).  
+3. Market baseline on every serious evaluation.  
+4. Reproducible experiments via cold-stored predictions.  
+5. Modular research rules (`rule_id` registry).  
+6. Transparent reporting of negative and relative results.
+
+---
+
+## 📦 Scope
+
+**In scope:** reproducible historical research on HKJC-structured data; leakage-aware features; OOT / walk-forward; market-baseline diagnostics; modular policy experiments; academic packaging of methodology (including negative results).
+
+**Out of scope:** live order routing; real-money bankroll products; guaranteed returns; publishing bet-level tip streams.
+
+A large engineering surface does not imply economic edge.
+
+---
+
+## License & responsibility
+
+Intended for education, methodology development, and reproducible quantitative research on HKJC historical data. Users are responsible for compliance with applicable law and HKJC terms when accessing data or placing any wagers.

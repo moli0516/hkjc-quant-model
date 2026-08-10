@@ -85,7 +85,6 @@ class HKJCCLI:
         config_dir = settings.config_dir
 
         if config_name is None:
-            # 互動式搜尋與選擇 JSON 設定檔
             json_files = sorted([f.name for f in config_dir.glob("*.json")])
             current_config = settings.config_path.name
 
@@ -112,7 +111,6 @@ class HKJCCLI:
         try:
             active_name = settings.switch_config(config_name)
             print(f"✅ 設定檔已成功切換並持久化儲存為: {active_name}")
-            # 切換設定檔後自動進行熱重載，確保所有 Module 與 Pipeline 重新載入新配置
             self.reload_modules()
             return True
         except Exception as e:
@@ -133,7 +131,6 @@ class HKJCCLI:
             "utils",
         )
 
-        # 找出目前所有屬於專案且已載入的模組
         target_modules = [
             mod_name
             for mod_name in list(sys.modules.keys())
@@ -149,7 +146,6 @@ class HKJCCLI:
             except Exception as e:
                 logger.warning(f"⚠️ 模組 {mod_name} 重載失敗: {e}")
 
-        # 重新更新當前 CLI 作用域內的類別與 settings 引用
         try:
             global CleaningPipeline, FeaturesPipeline, HorseScrapingPipeline
             global RaceScrapingPipeline, RaceDataLoader, ModelPipeline, DBManager, settings
@@ -163,7 +159,6 @@ class HKJCCLI:
             from scraper.horse_pipeline import HorseScrapingPipeline
             from scraper.race_pipeline import RaceScrapingPipeline
 
-            # 重新實例化 DBManager 並清空舊模型的記憶體快取
             self.db = DBManager()
             self.trained_model = None
 
@@ -214,7 +209,6 @@ class HKJCCLI:
         print("✅ 馬匹資料數據清洗完成，已更新至資料庫！\n")
 
     def run_trackwork_scraper(self, start_year: int = None, end_year: int = None):
-        """執行晨操 (Trackwork) 資料爬蟲"""
         print("🏇 [Step 5] 開始執行：晨操數據爬蟲 (Trackwork Scraper)...")
         if start_year is None or end_year is None:
             start_year, end_year = self._prompt_year_range()
@@ -232,7 +226,6 @@ class HKJCCLI:
             print(f"❌ 晨操數據爬蟲執行失敗: {e}\n")
 
     def run_trackwork_cleaner(self):
-        """執行晨操 (Trackwork) 數據清洗"""
         print("🧹 [Step 6] 開始執行：晨操數據清洗 (Trackwork Cleaner)...")
         try:
             cleaner = CleaningPipeline()
@@ -242,7 +235,6 @@ class HKJCCLI:
             print(f"❌ 晨操數據清洗執行失敗: {e}\n")
 
     def run_trail_scraper(self, start_year: int = None, end_year: int = None):
-        """執行試閘 (Barrier Trials) 資料爬蟲"""
         print("🏇 [Step 7] 開始執行：試閘數據爬蟲 (Trail Scraper)...")
         if start_year is None or end_year is None:
             start_year, end_year = self._prompt_year_range()
@@ -260,7 +252,6 @@ class HKJCCLI:
             print(f"❌ 試閘數據爬蟲執行失敗: {e}\n")
 
     def run_trail_cleaner(self):
-        """新增：執行試閘 (Barrier Trials) 數據清洗"""
         print("🧹 [Step 8] 開始執行：試閘數據清洗 (Trail Cleaner)...")
         try:
             cleaner = CleaningPipeline()
@@ -270,13 +261,11 @@ class HKJCCLI:
             print(f"❌ 試閘數據清洗執行失敗: {e}\n")
 
     def run_features_pipeline(self):
-        """執行全量量化特徵工程 Pipeline (一次性計算以避免冷啟動斷層與時間洩漏)"""
         print("⚙️ [Step 9] 開始執行：全量量化特徵工程 Pipeline...")
         if not self.check_db_has_races():
             return
 
         try:
-            # 1. 一次性載入全量賽事數據
             print("📥 正在從資料庫載入全量賽事歷史數據...")
             raw_df = self.db.load_all_merged_race_data()
 
@@ -284,7 +273,6 @@ class HKJCCLI:
                 print("⚠️ 未找到任何賽事記錄，終止特徵工程。")
                 return
 
-            # 2. 嚴格依時間與賽事順序排序，確保 shift(1) 與滾動統計時序完全正確
             print("⏳ 正在進行數據時序排序 (date, race_id)...")
             raw_df = raw_df.sort_values(
                 ["date", "race_id", "horse_id"]
@@ -292,23 +280,20 @@ class HKJCCLI:
 
             print(f"📊 載入完成，共計 {len(raw_df)} 筆數據。開始計算特徵矩陣...")
 
-            # 3. 呼叫 FeaturesPipeline 生成特徵
             pipeline = FeaturesPipeline(key_cols=["race_id", "horse_id"])
             feature_df = pipeline.run(df=raw_df)
 
-            # 4. 一次性覆蓋寫入資料庫
             print("💾 正在將全量特徵矩陣寫入資料庫 (feature_matrix)...")
             self.db.save_feature_matrix(
                 df=feature_df,
                 table_name="feature_matrix",
-                if_exists="replace",  # 一次性全量覆蓋
+                if_exists="replace",
             )
 
             print(
                 f"✅ 全量特徵工程計算完成！已成功寫入 {len(feature_df)} 筆數據至資料庫。\n"
             )
 
-            # 5. 記憶體回收
             del raw_df, feature_df
             gc.collect()
 
@@ -318,7 +303,6 @@ class HKJCCLI:
     def run_model_pipeline(
         self, model_type: str = "xgb_ranker", val_days: int = 90
     ):
-        """[Step 10] 執行機器學習模型訓練與長週期 Out-of-Time 財務回測"""
         print(f"🤖 [Step 10] 開始執行 Model Pipeline (驗證窗口: {val_days} 天)...")
         if not self.check_db_has_features():
             return
@@ -334,7 +318,7 @@ class HKJCCLI:
             self.trained_model = model
 
             print(f"✅ 模型訓練與 {val_days} 天 Out-of-Time 驗證完成！")
-            print(f"📊 評估指標詳細結果:")
+            print("📊 評估指標詳細結果:")
             for metric_name, val in metrics.items():
                 print(
                     f"   ├─ {metric_name}: {val:.4f}"
@@ -354,7 +338,6 @@ class HKJCCLI:
         val_days: int = 90,
         metric_name: str = "top1_win_rate",
     ):
-        """[Step 11] 執行 Optuna 自動超參數尋優 Pipeline"""
         print("🎯 [Step 11] 開始執行：Optuna 自動超參數尋優 (Model Tuning)...")
         if not self.check_db_has_features():
             return
@@ -388,7 +371,6 @@ class HKJCCLI:
             print(f"❌ 超參數尋優 Pipeline 執行失敗: {e}\n")
 
     def run_predictions(self, target_date: str = None):
-        """[Step 12] 執行未來/最新賽事預測推論"""
         print("🔮 [Step 12] 開始執行：賽事勝率預測推論 (Model Inference)...")
 
         if self.trained_model is None:
@@ -434,6 +416,47 @@ class HKJCCLI:
         except Exception as e:
             print(f"❌ 賽事預測執行失敗: {e}\n")
 
+    def _print_wf_report(self, report: dict) -> None:
+        from models.evaluation.rules import default_report_ids
+
+        if not report:
+            print("⚠️ 無評估報告可列印。\n")
+            return
+
+        ranking = report.get("ranking", {}) or {}
+        print("\n📊 [排序能力] Model vs Market")
+        for k in ("model_top1", "market_top1", "model_top3", "market_top3", "n_races", "n_runners"):
+            if k in ranking:
+                print(f"   ├─ {k}: {ranking.get(k)}")
+
+        rules = report.get("rules") or {}
+        print("DEBUG rules keys:", list(rules.keys()))
+        print("DEBUG A0:", rules.get("A0"))
+        if not rules:
+            print("\n⚠️ report 無 rules，請確認 walk_forward / offline 已用 run_many 產出。")
+        else:
+            
+            ordered = [i for i in default_report_ids() if i in rules]
+            ordered += [i for i in rules.keys() if i not in ordered]
+            for rule_id in ordered:
+                summary = rules[rule_id] or {}
+                name = summary.get("rule_name", "")
+                title = f"[{rule_id}] {name}".strip()
+                print(f"\n💰 {title}")
+                print(f"   ├─ n_bets : {summary.get('n_bets', 0)}")
+                print(f"   ├─ n_wins : {summary.get('n_wins', 0)}")
+                print(f"   ├─ hit_rate: {summary.get('hit_rate', float('nan'))}")
+                print(f"   ├─ ROI    : {summary.get('roi', float('nan'))}")
+                print(f"   └─ max_dd : {summary.get('max_drawdown', float('nan'))}")
+
+        if report.get("predictions_path"):
+            print(f"\n💾 Predictions: {report['predictions_path']}")
+            print(f"   run_id: {report.get('predictions_run_id')}")
+        if report.get("source") == "offline_store" and report.get("run_id"):
+            print(f"\n📂 離線 run_id: {report['run_id']}")
+
+        print("\n✅ 評估報告列印完成！\n")
+
     def run_walk_forward(
         self,
         model_type: str = "xgb_ranker",
@@ -441,8 +464,8 @@ class HKJCCLI:
         step_days: int = 30,
         overlay_threshold: float = 1.15,
     ):
-        """[Step 16] Walk-forward 回測：模型 vs 市場 + 簡單下注 ROI"""
-        print("📈 [Step 16] 開始執行：Walk-forward 評估 (Model vs Market)...")
+        """[Step 14] Walk-forward 回測：模型 vs 市場 + 簡單下注 ROI"""
+        print("📈 [Step 14] 開始執行：Walk-forward 評估 (Model vs Market)...")
         if not self.check_db_has_features():
             return
 
@@ -466,57 +489,7 @@ class HKJCCLI:
                 print("⚠️ Walk-forward 未回傳結果。\n")
                 return report
 
-            ranking = report.get("ranking", {}) or {}
-            rule_a = report.get("rule_a", {}) or {}
-            rule_b = report.get("rule_b", {}) or {}
-            rule_c = report.get("rule_c", {}) or {}
-            rule_c_1 = report.get("rule_c_1", {}) or {}
-            rule_d = report.get("rule_d", {}) or {}
-
-            print("\n📊 [排序能力] Model vs Market")
-            print(f"   ├─ model_top1 : {ranking.get('model_top1', float('nan'))}")
-            print(f"   ├─ market_top1: {ranking.get('market_top1', float('nan'))}")
-            print(f"   ├─ model_top3 : {ranking.get('model_top3', float('nan'))}")
-            print(f"   ├─ market_top3: {ranking.get('market_top3', float('nan'))}")
-            print(f"   ├─ n_races    : {ranking.get('n_races', 0)}")
-            print(f"   └─ n_runners  : {ranking.get('n_runners', 0)}")
-
-            print("\n💰 [規則 A] 每場固定下 model_rank==1")
-            print(f"   ├─ n_bets : {rule_a.get('n_bets', 0)}")
-            print(f"   ├─ n_wins : {rule_a.get('n_wins', 0)}")
-            print(f"   ├─ hit_rate: {rule_a.get('hit_rate', float('nan'))}")
-            print(f"   ├─ ROI    : {rule_a.get('roi', float('nan'))}")
-            print(f"   └─ max_dd : {rule_a.get('max_drawdown', float('nan'))}")
-
-            print("\n💰 [規則 B] Overlay 價值下注")
-            print(f"   ├─ n_bets : {rule_b.get('n_bets', 0)}")
-            print(f"   ├─ n_wins : {rule_b.get('n_wins', 0)}")
-            print(f"   ├─ hit_rate: {rule_b.get('hit_rate', float('nan'))}")
-            print(f"   ├─ ROI    : {rule_b.get('roi', float('nan'))}")
-            print(f"   └─ max_dd : {rule_b.get('max_drawdown', float('nan'))}")
-            
-            print("\n💰 [規則 C] 僅當模型第一 == 市場大熱 + 強試閘（同馬）時才下")
-            print(f"   ├─ n_bets : {rule_c.get('n_bets', 0)}")
-            print(f"   ├─ n_wins : {rule_c.get('n_wins', 0)}")
-            print(f"   ├─ hit_rate: {rule_c.get('hit_rate', float('nan'))}")
-            print(f"   ├─ ROI    : {rule_c.get('roi', float('nan'))}")
-            print(f"   └─ max_dd : {rule_c.get('max_drawdown', float('nan'))}")
-            
-            print("\n💰 [規則 C_1] 僅當模型第一 == 市場大熱 + 弱試閘（同馬）時才下")
-            print(f"   ├─ n_bets : {rule_c_1.get('n_bets', 0)}")
-            print(f"   ├─ n_wins : {rule_c_1.get('n_wins', 0)}")
-            print(f"   ├─ hit_rate: {rule_c_1.get('hit_rate', float('nan'))}")
-            print(f"   ├─ ROI    : {rule_c_1.get('roi', float('nan'))}")
-            print(f"   └─ max_dd : {rule_c_1.get('max_drawdown', float('nan'))}")
-
-            print("\n💰 [規則 D] 模型第一，且該馬市場排名 <= 2 才下")
-            print(f"   ├─ n_bets : {rule_d.get('n_bets', 0)}")
-            print(f"   ├─ n_wins : {rule_d.get('n_wins', 0)}")
-            print(f"   ├─ hit_rate: {rule_d.get('hit_rate', float('nan'))}")
-            print(f"   ├─ ROI    : {rule_d.get('roi', float('nan'))}")
-            print(f"   └─ max_dd : {rule_d.get('max_drawdown', float('nan'))}")
-
-            print("\n✅ Walk-forward 評估完成！\n")
+            self._print_wf_report(report)
             return report
 
         except AttributeError as e:
@@ -527,6 +500,39 @@ class HKJCCLI:
         except Exception as e:
             print(f"❌ Walk-forward 評估執行失敗: {e}\n")
             logger.exception("Walk-forward failed")
+
+    def run_offline_evaluation(
+        self,
+        run_id: str = None,
+        path: str = None,
+        overlay_threshold: float = 1.15,
+        list_only: bool = False,
+    ):
+        """[Step 15] 從冷儲存 predictions 重跑 evaluation（不重訓）"""
+        print("📂 [Step 15] 離線評估（Cold-stored Predictions）...")
+        try:
+            model_pipe = ModelPipeline(db_manager=self.db)
+            report = model_pipe.run_offline_evaluation(
+                run_id=run_id,
+                path=path,
+                overlay_threshold=overlay_threshold,
+                list_only=list_only,
+            )
+            if list_only:
+                return report
+            self._print_wf_report(report)
+            return report
+        except FileNotFoundError as e:
+            print(f"❌ 找不到冷儲存檔案: {e}")
+            print("👉 請先執行 Step 14 Walk-forward（會自動存 predictions）。\n")
+        except AttributeError as e:
+            print(
+                "❌ ModelPipeline 尚未實作 run_offline_evaluation()。"
+                f" 請先加入冷儲存相關方法。\n詳細: {e}\n"
+            )
+        except Exception as e:
+            print(f"❌ 離線評估失敗: {e}\n")
+            logger.exception("offline evaluation failed")
 
     # ---------------- 互動式選單 ----------------
     def interactive_menu(self):
@@ -550,48 +556,52 @@ class HKJCCLI:
                 print("11. 🎯 Optuna 自動尋優超參數 (Model Tuning)")
                 print("12. 🔮 執行賽事勝率預測 (Inference)")
                 print("13. ⚡ 執行一鍵全套 ETL + 特徵工程 + 模型訓練 (1 ➔ 10)")
-                print("14. ⚙️  切換並設定生效 settings.json (Switch Settings)")
-                print("15. 🔄 熱重載所有模組與腳本 (Reload Modules)")
-                print("16. 📈 Walk-forward 回測 (Model vs Market + ROI)")
+                print("14. 📈 Walk-forward 回測 (Model vs Market + ROI)")
+                print("15. 📂 離線評估冷儲存 Predictions（不重訓）")
+                print("-" * 55)
+                print("S.  ⚙️  切換並設定生效 settings.json (Switch Settings)")
+                print("R.  🔄 熱重載所有模組與腳本 (Reload Modules)")
                 print("0.  退出系統")
                 print("=" * 55)
 
                 choice = (
                     input(
-                        "請選擇要執行的功能編號 (0-16，或按 Ctrl+C 退出): "
+                        "請選擇功能 (0-15 / S / R，或 Ctrl+C 退出): "
                     )
                     .strip()
                 )
+                # 字母指令不區分大小寫
+                choice_key = choice.upper() if choice.isalpha() else choice
 
-                if choice == "1":
+                if choice_key == "1":
                     self.run_race_scraper()
-                elif choice == "2":
+                elif choice_key == "2":
                     self.run_race_cleaner()
-                elif choice == "3":
+                elif choice_key == "3":
                     self.run_horse_scraper()
-                elif choice == "4":
+                elif choice_key == "4":
                     self.run_horse_cleaner()
-                elif choice == "5":
+                elif choice_key == "5":
                     self.run_trackwork_scraper()
-                elif choice == "6":
+                elif choice_key == "6":
                     self.run_trackwork_cleaner()
-                elif choice == "7":
+                elif choice_key == "7":
                     self.run_trail_scraper()
-                elif choice == "8":
+                elif choice_key == "8":
                     self.run_trail_cleaner()
-                elif choice == "9":
+                elif choice_key == "9":
                     self.run_features_pipeline()
-                elif choice == "10":
+                elif choice_key == "10":
                     val_days_str = input("請輸入 val days (預設 90 日): ").strip()
                     val_days = int(val_days_str) if val_days_str.isdigit() else 90
                     self.run_model_pipeline(val_days=val_days)
-                elif choice == "11":
+                elif choice_key == "11":
                     trials_in = input(
                         "請輸入 Optuna 搜尋輪數 (預設 30 次): "
                     ).strip()
                     n_trials = int(trials_in) if trials_in.isdigit() else 30
                     self.run_tune_pipeline(n_trials=n_trials)
-                elif choice == "12":
+                elif choice_key == "12":
                     date_input = (
                         input(
                             "輸入預測日期 (YYYY-MM-DD，留空則預測最新賽事): "
@@ -599,7 +609,7 @@ class HKJCCLI:
                         or None
                     )
                     self.run_predictions(target_date=date_input)
-                elif choice == "13":
+                elif choice_key == "13":
                     print(
                         "\n🔄 開始一鍵執行全套 Pipeline (從爬蟲到模型訓練)..."
                     )
@@ -619,11 +629,7 @@ class HKJCCLI:
                         self.run_trail_cleaner()
                         self.run_features_pipeline()
                         self.run_model_pipeline()
-                elif choice == "14":
-                    self.switch_settings()
-                elif choice == "15":
-                    self.reload_modules()
-                elif choice == "16":
+                elif choice_key == "14":
                     min_train_in = input(
                         "最小訓練天數 min_train_days [預設 730]: "
                     ).strip()
@@ -648,7 +654,30 @@ class HKJCCLI:
                         step_days=step_days,
                         overlay_threshold=overlay_threshold,
                     )
-                elif choice == "0":
+                elif choice_key == "15":
+                    print("\n可用 run 列表：")
+                    try:
+                        from models.evaluation.prediction_store import (
+                            PredictionStore,
+                        )
+
+                        PredictionStore().print_runs()
+                    except Exception as e:
+                        print(f"（無法列出: {e}）")
+                    run_in = input(
+                        "輸入 run_id（留空=最新；輸入 list 只列出）: "
+                    ).strip()
+                    if run_in.lower() == "list":
+                        self.run_offline_evaluation(list_only=True)
+                    elif run_in == "":
+                        self.run_offline_evaluation()
+                    else:
+                        self.run_offline_evaluation(run_id=run_in)
+                elif choice_key == "S":
+                    self.switch_settings()
+                elif choice_key == "R":
+                    self.reload_modules()
+                elif choice_key == "0":
                     print("👋 已退出 CLI 工具。")
                     break
                 else:
@@ -721,6 +750,22 @@ def main():
         help="執行 Walk-forward 回測 (Model vs Market + ROI)",
     )
     parser.add_argument(
+        "--eval-store",
+        action="store_true",
+        help="從冷儲存 predictions 離線重跑 evaluation（不重訓）",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="冷儲存 run_id（配合 --eval-store）",
+    )
+    parser.add_argument(
+        "--list-runs",
+        action="store_true",
+        help="列出已儲存的 prediction runs",
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         help="依序執行全套流程 (1 ➔ 10)",
@@ -765,16 +810,17 @@ def main():
         "--overlay-threshold",
         type=float,
         default=1.15,
-        help="Walk-forward Overlay 下注門檻 (預設: 1.15)",
+        help="Overlay 價值下注門檻 (預設: 1.15)",
     )
 
     args = parser.parse_args()
+
     cli = HKJCCLI()
 
     if args.config:
         cli.switch_settings(args.config)
 
-    # 若無指定任何執行動作的 CLI 旗標，開啟互動式介面
+    # 無任何動作旗標 → 進互動選單
     if not any(
         [
             args.scrape_races,
@@ -790,13 +836,14 @@ def main():
             args.tune_model,
             args.predict,
             args.walk_forward,
+            args.eval_store,
+            args.list_runs,
             args.all,
         ]
     ):
         cli.interactive_menu()
         return
 
-    # 命令列參數驅動模式
     if args.all:
         curr_y = datetime.now().year
         s_y = args.start_year if args.start_year else curr_y
@@ -863,6 +910,12 @@ def main():
             step_days=args.step_days,
             overlay_threshold=args.overlay_threshold,
         )
+
+    if args.list_runs:
+        cli.run_offline_evaluation(list_only=True)
+
+    if args.eval_store:
+        cli.run_offline_evaluation(run_id=args.run_id)
 
 
 if __name__ == "__main__":

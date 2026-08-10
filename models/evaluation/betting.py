@@ -1,12 +1,27 @@
-"""簡單下注規則與資金曲線統計。"""
+"""下注結算與規則執行（規則本體在 rules/）。"""
 
 from __future__ import annotations
+
+from typing import Iterable, Optional
 
 import numpy as np
 import pandas as pd
 
+from models.evaluation.rules.base import BettingRule
+from models.evaluation.rules.registry import (
+    RuleRegistry,
+    default_registry,
+    default_report_ids,
+)
+
 
 class BetEvaluator:
+    """固定注碼結算 + 透過 RuleRegistry 執行規則。
+
+    相容舊 API：rule_a / rule_b / rule_c_same_pick / ...
+    新 API：run_rule / run_many
+    """
+
     def __init__(
         self,
         overlay_threshold: float = 1.15,
@@ -16,6 +31,7 @@ class BetEvaluator:
         label_col: str = "placing",
         score_col: str = "model_score",
         rank_col: str = "model_rank",
+        registry: Optional[RuleRegistry] = None,
     ):
         self.overlay_threshold = overlay_threshold
         self.stake = stake
@@ -24,141 +40,84 @@ class BetEvaluator:
         self.label_col = label_col
         self.score_col = score_col
         self.rank_col = rank_col
+        self.registry = registry or default_registry()
 
-    def _softmax_by_race(self, df: pd.DataFrame) -> pd.Series:
-        """同場對 model_score 做 softmax，得到 model_prob。"""
-        def _sm(s: pd.Series) -> pd.Series:
-            x = s.astype(float).values
-            x = x - np.nanmax(x)
-            ex = np.exp(x)
-            ex = np.where(np.isfinite(ex), ex, 0.0)
-            denom = ex.sum()
-            if denom <= 0:
-                return pd.Series(np.ones(len(s)) / max(len(s), 1), index=s.index)
-            return pd.Series(ex / denom, index=s.index)
+    def _ctx(self) -> dict:
+        return {
+            "overlay_threshold": self.overlay_threshold,
+            "race_col": self.race_col,
+            "odds_col": self.odds_col,
+            "label_col": self.label_col,
+            "score_col": self.score_col,
+            "rank_col": self.rank_col,
+            "stake": self.stake,
+        }
 
-        return df.groupby(self.race_col)[self.score_col].transform(_sm)
+    def _settle(self, bets: pd.DataFrame, rule_id: str = "") -> pd.DataFrame:
+        if bets is None or bets.empty:
+            return pd.DataFrame()
 
-    def rule_a(self, df: pd.DataFrame) -> pd.DataFrame:
-        """每場固定下 model_rank == 1。"""
-        work = df.dropna(subset=[self.rank_col, self.odds_col, self.label_col]).copy()
-        work = work[work[self.odds_col] > 0]
-        bets = work[work[self.rank_col] == 1].copy()
-        bets["stake"] = self.stake
-        # HKJC 獨贏：賠率為「贏時每注收回的倍數（含本金）」常見定義；
-        # 若你的 win_odds 是淨賠率，請改為 profit = stake * odds
-        bets["profit"] = np.where(
-            bets[self.label_col] == 1,
-            bets["stake"] * bets[self.odds_col] - bets["stake"],
-            -bets["stake"],
+        out = bets.groupby(self.race_col, as_index=False).first().copy()
+        out["stake"] = self.stake
+        out["profit"] = np.where(
+            out[self.label_col] == 1,
+            out["stake"] * out[self.odds_col] - out["stake"],
+            -out["stake"],
         )
-        bets["rule"] = "A_top1"
-        return bets
+        out["rule_id"] = rule_id
+        out["rule"] = rule_id  # 相容舊欄位名
+        return out
 
-    def rule_b(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Overlay 價值下注：
-        model_prob > market_prob * threshold 且 model_rank <= 3。
-        """
-        work = df.dropna(
-            subset=[self.rank_col, self.odds_col, self.label_col, self.score_col]
-        ).copy()
-        work = work[work[self.odds_col] > 0]
+    # ------------------------------------------------------------------
+    # 新 API
+    # ------------------------------------------------------------------
+    def run_rule(
+        self, df: pd.DataFrame, rule: BettingRule | str
+    ) -> pd.DataFrame:
+        if isinstance(rule, str):
+            rule = self.registry.get(rule)
+        if not rule.is_available(df):
+            return pd.DataFrame()
+        selected = rule.select(df, ctx=self._ctx())
+        if selected is None or selected.empty:
+            return pd.DataFrame()
+        return self._settle(selected, rule_id=rule.rule_id)
 
-        work["model_prob"] = self._softmax_by_race(work)
-        # 市場隱含機率（同場正規化）
-        work["raw_market_prob"] = 1.0 / work[self.odds_col]
-        work["market_prob"] = work.groupby(self.race_col)["raw_market_prob"].transform(
-            lambda s: s / s.sum() if s.sum() > 0 else s
-        )
+    def run_many(
+        self,
+        df: pd.DataFrame,
+        rule_ids: Optional[list[str]] = None,
+    ) -> dict[str, dict]:
+        """執行多條規則並 summarize。回傳 {rule_id: summary_dict}。"""
+        ids = rule_ids if rule_ids is not None else default_report_ids()
+        out: dict[str, dict] = {}
+        for rid in ids:
+            if not self.registry.has(rid):
+                continue
+            bets = self.run_rule(df, rid)
+            summary = self.summarize(bets)
+            summary["rule_id"] = rid
+            if self.registry.has(rid):
+                summary["rule_name"] = self.registry.get(rid).name
+            out[rid] = summary
+            
+        return out
 
-        mask = (
-            (work[self.rank_col] <= 3)
-            & (work["model_prob"] > work["market_prob"] * self.overlay_threshold)
-        )
-        bets = work.loc[mask].copy()
-        bets["stake"] = self.stake
-        bets["profit"] = np.where(
-            bets[self.label_col] == 1,
-            bets["stake"] * bets[self.odds_col] - bets["stake"],
-            -bets["stake"],
-        )
-        bets["rule"] = "B_overlay"
-        return bets
-    
-    def rule_c_same_pick(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        規則 C：僅當模型第一 == 市場大熱（同馬）+ 強試閘時才下。
-        條件：model_rank==1 且 market_rank==1
-        """
-        work = df.dropna(
-            subset=[self.rank_col, "market_rank", "is_strong_trial", self.odds_col, self.label_col]
-        ).copy()
-        work = work[work[self.odds_col] > 0]
+    def run_many_bets(
+        self,
+        df: pd.DataFrame,
+        rule_ids: Optional[list[str]] = None,
+    ) -> dict[str, pd.DataFrame]:
+        ids = rule_ids if rule_ids is not None else default_report_ids()
+        return {
+            rid: self.run_rule(df, rid)
+            for rid in ids
+            if self.registry.has(rid)
+        }
 
-        bets = work[
-            (work[self.rank_col] == 1) & (work["market_rank"] == 1) & (work["is_strong_trial"] == 1)
-        ].copy()
-        bets = bets.groupby(self.race_col, as_index=False).first()
-
-        bets["stake"] = self.stake
-        bets["profit"] = np.where(
-            bets[self.label_col] == 1,
-            bets["stake"] * bets[self.odds_col] - bets["stake"],
-            -bets["stake"],
-        )
-        bets["rule"] = "C_same_pick"
-        return bets
-    
-    def rule_c_compare(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        規則 C-對照：僅當模型第一 == 市場大熱（同馬）+ 弱試閘時才下。
-        條件：model_rank==1 且 market_rank==1
-        """
-        work = df.dropna(
-            subset=[self.rank_col, "market_rank", "is_strong_trial", self.odds_col, self.label_col]
-        ).copy()
-        work = work[work[self.odds_col] > 0]
-
-        bets = work[
-            (work[self.rank_col] == 1) & (work["market_rank"] == 1) & (work["is_strong_trial"] == 0)
-        ].copy()
-        bets = bets.groupby(self.race_col, as_index=False).first()
-
-        bets["stake"] = self.stake
-        bets["profit"] = np.where(
-            bets[self.label_col] == 1,
-            bets["stake"] * bets[self.odds_col] - bets["stake"],
-            -bets["stake"],
-        )
-        bets["rule"] = "C_same_pick"
-        return bets
-
-
-    def rule_d_model1_market_top2(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        規則 D：模型第一，且該馬市場排名 <= 2 才下。
-        條件：model_rank==1 且 market_rank<=2
-        """
-        work = df.dropna(
-            subset=[self.rank_col, "market_rank", self.odds_col, self.label_col]
-        ).copy()
-        work = work[work[self.odds_col] > 0]
-
-        bets = work[
-            (work[self.rank_col] == 1) & (work["market_rank"] <= 2)
-        ].copy()
-        bets = bets.groupby(self.race_col, as_index=False).first()
-
-        bets["stake"] = self.stake
-        bets["profit"] = np.where(
-            bets[self.label_col] == 1,
-            bets["stake"] * bets[self.odds_col] - bets["stake"],
-            -bets["stake"],
-        )
-        bets["rule"] = "D_model1_mkt_top2"
-        return bets
-
+    # ------------------------------------------------------------------
+    # 統計
+    # ------------------------------------------------------------------
     def summarize(self, bets: pd.DataFrame) -> dict:
         if bets is None or bets.empty:
             return {
@@ -173,9 +132,10 @@ class BetEvaluator:
                 "equity_curve": pd.Series(dtype=float),
             }
 
-        bets = bets.sort_values(
-            by=[c for c in ["race_date", "date", self.race_col] if c in bets.columns]
-        ).copy()
+        sort_cols = [
+            c for c in ["race_date", "date", self.race_col] if c in bets.columns
+        ]
+        bets = bets.sort_values(by=sort_cols).copy() if sort_cols else bets.copy()
 
         total_stake = float(bets["stake"].sum())
         total_profit = float(bets["profit"].sum())
